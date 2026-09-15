@@ -1,0 +1,420 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         String    @default("CUSTOMER") // CUSTOMER, MANAGER, ADMIN
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  managerProfile ManagerProfile?
+  adminProfile   AdminProfile?
+  bookings       Booking[]       @relation("CustomerBookings")
+  reviews        Review[]
+  favorites      Favorite[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model ManagerProfile {
+  id                         String    @id @default(uuid())
+  userId                     String    @unique
+  businessName               String
+  businessRegistrationNumber String?
+  taxId                      String?
+  phone                      String
+  address                    String?
+  city                       String?
+  verificationStatus         String    @default("PENDING") // PENDING, VERIFIED, REJECTED, SUSPENDED
+  verificationNotes          String?
+  submittedAt                DateTime  @default(now())
+  verifiedAt                 DateTime?
+  verifiedById               String?
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  halls Hall[]
+
+  @@index([verificationStatus])
+}
+
+model AdminProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  adminRole   String   @default("OPERATIONS_ADMIN") // SUPER_ADMIN, OPERATIONS_ADMIN, VERIFICATION_ADMIN, FINANCE_ADMIN, SUPPORT_ADMIN
+  permissions String   // JSON array of permission strings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model City {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  slug      String     @unique
+  state     String
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  localities Locality[]
+  halls      Hall[]
+
+  @@index([slug])
+}
+
+model Locality {
+  id        String   @id @default(uuid())
+  cityId    String
+  name      String
+  slug      String
+  createdAt DateTime @default(now())
+
+  city  City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  halls Hall[]
+
+  @@index([cityId])
+  @@index([slug])
+}
+
+model Occasion {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  icon        String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  hallOccasions HallOccasion[]
+  bookings      Booking[]
+
+  @@index([slug])
+}
+
+model HallOccasion {
+  id              String    @id @default(uuid())
+  hallId          String
+  occasionId      String
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  rejectionReason String?
+  approvedAt      DateTime?
+  approvedById    String?
+  createdAt       DateTime  @default(now())
+
+  hall     Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  occasion Occasion @relation(fields: [occasionId], references: [id], onDelete: Cascade)
+
+  @@unique([hallId, occasionId])
+  @@index([hallId])
+  @@index([status])
+}
+
+model Amenity {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  category  String   @default("General") // Facilities, Dining, Entertainment, Services
+  icon      String?
+  createdAt DateTime @default(now())
+
+  hallAmenities HallAmenity[]
+}
+
+model HallAmenity {
+  id              String   @id @default(uuid())
+  hallId          String
+  amenityId        String
+  isComplimentary Boolean  @default(true)
+  additionalCost  Float    @default(0)
+  createdAt       DateTime @default(now())
+
+  hall    Hall    @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  amenity Amenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@unique([hallId, amenityId])
+  @@index([hallId])
+}
+
+model Hall {
+  id              String    @id @default(uuid())
+  managerId       String
+  name            String
+  slug            String    @unique
+  description     String
+  cityId          String
+  localityId      String?
+  address         String
+  latitude        Float?
+  longitude       Float?
+  contactPhone    String
+  contactEmail    String
+  
+  minCapacity     Int       @default(50)
+  maxCapacity     Int       @default(500)
+  indoorAreaSqFt  Int?
+  outdoorAreaSqFt Int?
+  hasParking      Boolean   @default(true)
+  parkingCapacity Int?
+  roomsCount      Int       @default(2)
+
+  status          String    @default("PENDING_APPROVAL") // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, SUSPENDED, ARCHIVED
+  rejectionReason String?
+  approvedAt      DateTime?
+  approvedById    String?
+  isFeatured      Boolean   @default(false)
+
+  cancellationPolicy        String?
+  venueRules                String?
+  alcoholAllowed            Boolean  @default(false)
+  outsideCateringAllowed    Boolean  @default(false)
+  outsideDecorAllowed       Boolean  @default(false)
+  cancellationDeadlineHours Int      @default(72)
+  refundPercentage          Float    @default(80.0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  manager         ManagerProfile   @relation(fields: [managerId], references: [id], onDelete: Cascade)
+  city            City             @relation(fields: [cityId], references: [id])
+  locality        Locality?        @relation(fields: [localityId], references: [id])
+  media           HallMedia[]
+  occasions       HallOccasion[]
+  amenities       HallAmenity[]
+  pricingRule     PricingRule?
+  addons          HallAddon[]
+  availabilityBlocks AvailabilityBlock[]
+  bookings        Booking[]
+  reviews         Review[]
+  favorites       Favorite[]
+
+  @@index([managerId])
+  @@index([cityId])
+  @@index([status])
+  @@index([isFeatured])
+  @@index([minCapacity, maxCapacity])
+}
+
+model HallMedia {
+  id           String   @id @default(uuid())
+  hallId       String
+  mediaType    String   @default("IMAGE") // IMAGE, VIDEO
+  url          String
+  caption      String?
+  isCover      Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  hall Hall @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@index([hallId])
+}
+
+model PricingRule {
+  id                   String   @id @default(uuid())
+  hallId               String   @unique
+  baseRentalPrice      Float    @default(50000)
+  weekendMultiplier    Float    @default(1.15)
+  cleaningFee          Float    @default(2000)
+  securityDeposit      Float    @default(10000)
+  taxRatePercent       Float    @default(18.0)
+  perPlateVegPrice     Float    @default(650)
+  perPlateNonVegPrice  Float    @default(850)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  hall Hall @relation(fields: [hallId], references: [id], onDelete: Cascade)
+}
+
+model HallAddon {
+  id          String   @id @default(uuid())
+  hallId      String
+  name        String
+  description String?
+  price       Float    @default(0)
+  pricingType String   @default("FIXED") // FIXED, PER_GUEST, PER_HOUR
+  isOptional  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  hall Hall @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@index([hallId])
+}
+
+model AvailabilityBlock {
+  id        String   @id @default(uuid())
+  hallId    String
+  startDate String   // YYYY-MM-DD
+  endDate   String   // YYYY-MM-DD
+  startTime String   @default("00:00") // HH:mm
+  endTime   String   @default("23:59") // HH:mm
+  reason    String
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  hall Hall @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@index([hallId, startDate, endDate])
+}
+
+model Booking {
+  id                     String    @id @default(uuid())
+  bookingNumber          String    @unique
+  hallId                 String
+  customerId             String?   // null if external
+  isExternal             Boolean   @default(false)
+  externalCustomerName   String?
+  externalCustomerPhone  String?
+  occasionId             String?
+
+  eventDate              String    // YYYY-MM-DD
+  startTime              String    // HH:mm, e.g. "18:00"
+  endTime                String    // HH:mm, e.g. "23:00"
+  guestCount             Int
+  cateringType           String    @default("NONE") // NONE, VEG, NON_VEG
+
+  status                 String    @default("PAYMENT_PENDING") // DRAFT, PAYMENT_PENDING, CONFIRMED, CANCELLED, COMPLETED, REFUNDED, HOLD_EXPIRED
+  holdExpiresAt          DateTime?
+
+  baseRentalAmount       Float     @default(0)
+  cateringAmount         Float     @default(0)
+  addonsAmount           Float     @default(0)
+  taxesAmount            Float     @default(0)
+  discountAmount         Float     @default(0)
+  totalAmount            Float     @default(0)
+
+  platformCommissionPercent Float @default(10.0)
+  platformCommissionAmount  Float @default(0)
+  managerPayoutAmount       Float @default(0)
+
+  cancelledAt            DateTime?
+  cancelledById          String?
+  cancellationReason     String?
+  refundAmount           Float     @default(0)
+
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  hall     Hall          @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  customer User?         @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: SetNull)
+  occasion Occasion?     @relation(fields: [occasionId], references: [id])
+  items    BookingItem[]
+  payments Payment[]
+  reviews  Review[]
+
+  @@index([hallId, eventDate])
+  @@index([customerId])
+  @@index([status])
+  @@index([bookingNumber])
+}
+
+model BookingItem {
+  id        String   @id @default(uuid())
+  bookingId String
+  addonId   String?
+  name      String
+  price     Float
+  quantity  Int      @default(1)
+  total     Float
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model Payment {
+  id                    String    @id @default(uuid())
+  bookingId             String
+  paymentNumber         String    @unique
+  amount                Float
+  currency              String    @default("INR")
+  status                String    @default("INITIATED") // INITIATED, SUCCESS, FAILED, REFUNDED
+  provider              String    @default("MOCK_GATEWAY") // MOCK_GATEWAY, STRIPE, RAZORPAY
+  providerTransactionId String?
+  providerSignature     String?
+  paidAt                DateTime?
+  createdAt             DateTime  @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([paymentNumber])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  hallId     String
+  customerId String
+  bookingId  String   @unique
+  rating     Int      // 1-5
+  title      String?
+  content    String
+  status     String   @default("APPROVED") // APPROVED, FLAGGED, HIDDEN
+  createdAt  DateTime @default(now())
+
+  hall     Hall @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  customer User @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  booking  Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([hallId])
+  @@index([customerId])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  hallId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hall Hall @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hallId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("SYSTEM") // BOOKING, APPROVAL, PAYMENT, SYSTEM
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorRole  String?
+  actorEmail String?
+  action     String   // e.g. "HALL_APPROVED", "MANAGER_VERIFIED", "BOOKING_CANCELLED"
+  entityType String   // "HALL", "MANAGER", "BOOKING", "USER", "OCCASION"
+  entityId   String?
+  details    String?  // JSON string
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}
