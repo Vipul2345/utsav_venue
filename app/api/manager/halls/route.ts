@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { createAuditLog } from '@/lib/services/auditService';
 import { createNotification } from '@/lib/services/notificationService';
+import { getSystemSettings } from '@/lib/settings';
 
 export async function GET() {
   try {
@@ -103,6 +104,22 @@ export async function POST(request: Request) {
       refundPercentage = 80,
     } = body;
 
+    const settings = await getSystemSettings();
+    const cleanMediaUrls = (Array.isArray(mediaUrls) ? mediaUrls : [])
+      .map((u: any) => (typeof u === 'string' ? u.trim() : ''))
+      .filter((u: string) => Boolean(u) && /^https?:\/\/.+/i.test(u));
+
+    if (cleanMediaUrls.length < 2) {
+      return NextResponse.json({ error: 'At least 2 valid image URLs are required to list a hall.' }, { status: 400 });
+    }
+
+    if (cleanMediaUrls.length > settings.maxHallImages) {
+      return NextResponse.json(
+        { error: `You can upload at most ${settings.maxHallImages} images as per current platform limit.` },
+        { status: 400 }
+      );
+    }
+
     if (!name || !description || !cityId || !address || !minCapacity || !maxCapacity || !baseRentalPrice) {
       return NextResponse.json({ error: 'Please provide all mandatory hall details and pricing.' }, { status: 400 });
     }
@@ -162,10 +179,11 @@ export async function POST(request: Request) {
           })),
         },
         media: {
-          create: mediaUrls.map((url: string, index: number) => ({
+          create: cleanMediaUrls.map((url: string, index: number) => ({
             url,
             isCover: index === 0,
             displayOrder: index,
+            verificationStatus: 'PENDING', // All manager-submitted images start in verification mode!
           })),
         },
       },

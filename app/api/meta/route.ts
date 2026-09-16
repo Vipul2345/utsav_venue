@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getSystemSettings } from '@/lib/settings';
 
 export async function GET() {
   try {
-    const [cities, occasions, amenities] = await Promise.all([
+    const [cities, occasions, amenities, settings] = await Promise.all([
       prisma.city.findMany({
         where: { isActive: true },
         include: {
@@ -20,12 +21,15 @@ export async function GET() {
       prisma.amenity.findMany({
         orderBy: { name: 'asc' },
       }),
+      getSystemSettings(),
     ]);
 
     return NextResponse.json({
       cities,
       occasions,
       amenities,
+      maxHallImages: settings.maxHallImages,
+      defaultTaxPercent: settings.defaultTaxPercent,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to fetch meta data' }, { status: 500 });

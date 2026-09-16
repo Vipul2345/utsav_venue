@@ -64,11 +64,79 @@ export async function POST(request: Request) {
       include: {
         manager: { include: { user: true } },
         occasions: true,
+        media: true,
       },
     });
 
     if (!hall) {
       return NextResponse.json({ error: 'Venue not found' }, { status: 404 });
+    }
+
+    // Media Moderation Actions
+    if (action === 'APPROVE_MEDIA') {
+      const { mediaId } = body;
+      if (!mediaId) return NextResponse.json({ error: 'mediaId is required' }, { status: 400 });
+
+      const updatedMedia = await prisma.hallMedia.update({
+        where: { id: mediaId },
+        data: { verificationStatus: 'APPROVED', rejectionReason: null },
+      });
+
+      await createAuditLog({
+        actorId: session.userId,
+        actorRole: session.adminRole || 'ADMIN',
+        actorEmail: session.email,
+        action: 'HALL_MEDIA_APPROVED',
+        entityType: 'HALL_MEDIA',
+        entityId: mediaId,
+        details: { hallId: hall.id, mediaId },
+      });
+
+      return NextResponse.json({ success: true, media: updatedMedia });
+    }
+
+    if (action === 'REJECT_MEDIA') {
+      const { mediaId } = body;
+      if (!mediaId) return NextResponse.json({ error: 'mediaId is required' }, { status: 400 });
+
+      const updatedMedia = await prisma.hallMedia.update({
+        where: { id: mediaId },
+        data: {
+          verificationStatus: 'REJECTED',
+          rejectionReason: rejectionReason?.trim() || 'Photo does not meet marketplace clarity/branding criteria',
+        },
+      });
+
+      await createAuditLog({
+        actorId: session.userId,
+        actorRole: session.adminRole || 'ADMIN',
+        actorEmail: session.email,
+        action: 'HALL_MEDIA_REJECTED',
+        entityType: 'HALL_MEDIA',
+        entityId: mediaId,
+        details: { hallId: hall.id, mediaId, rejectionReason },
+      });
+
+      return NextResponse.json({ success: true, media: updatedMedia });
+    }
+
+    if (action === 'APPROVE_ALL_MEDIA') {
+      await prisma.hallMedia.updateMany({
+        where: { hallId: hall.id },
+        data: { verificationStatus: 'APPROVED', rejectionReason: null },
+      });
+
+      await createAuditLog({
+        actorId: session.userId,
+        actorRole: session.adminRole || 'ADMIN',
+        actorEmail: session.email,
+        action: 'HALL_ALL_MEDIA_APPROVED',
+        entityType: 'HALL',
+        entityId: hall.id,
+        details: { hallId: hall.id },
+      });
+
+      return NextResponse.json({ success: true });
     }
 
     let updatedStatus = hall.status;
@@ -83,10 +151,16 @@ export async function POST(request: Request) {
         approvedById: session.userId,
       };
 
-      // Also automatically approve requested occasions that were pending if approved
+      // Automatically approve requested occasions that were pending if approved
       await prisma.hallOccasion.updateMany({
         where: { hallId: hall.id, status: 'PENDING' },
         data: { status: 'APPROVED', approvedAt: new Date(), approvedById: session.userId },
+      });
+
+      // Automatically approve all pending media when whole hall is approved
+      await prisma.hallMedia.updateMany({
+        where: { hallId: hall.id, verificationStatus: 'PENDING' },
+        data: { verificationStatus: 'APPROVED', rejectionReason: null },
       });
     } else if (action === 'REJECT') {
       if (!rejectionReason) {

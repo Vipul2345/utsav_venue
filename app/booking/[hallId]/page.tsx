@@ -58,8 +58,10 @@ function BookingCheckoutContent() {
         const userRes = await fetch('/api/auth/me');
         const userData = await userRes.json();
         if (!userData.user) {
-          // Redirect to login with return url
-          router.push(`/login?redirect=/booking/${hallId}?${searchParams.toString()}`);
+          // Redirect to login with URL-encoded return path including search parameters
+          const queryString = searchParams.toString();
+          const returnPath = `/booking/${hallId}${queryString ? `?${queryString}` : ''}`;
+          router.push(`/login?redirect=${encodeURIComponent(returnPath)}`);
           return;
         }
         setCurrentUser(userData.user);

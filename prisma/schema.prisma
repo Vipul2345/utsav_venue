@@ -212,18 +212,21 @@ model Hall {
 }
 
 model HallMedia {
-  id           String   @id @default(uuid())
-  hallId       String
-  mediaType    String   @default("IMAGE") // IMAGE, VIDEO
-  url          String
-  caption      String?
-  isCover      Boolean  @default(false)
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
+  id                 String   @id @default(uuid())
+  hallId             String
+  mediaType          String   @default("IMAGE") // IMAGE, VIDEO
+  url                String
+  caption            String?
+  isCover            Boolean  @default(false)
+  displayOrder       Int      @default(0)
+  verificationStatus String   @default("APPROVED") // PENDING, APPROVED, REJECTED
+  rejectionReason    String?
+  createdAt          DateTime @default(now())
 
   hall Hall @relation(fields: [hallId], references: [id], onDelete: Cascade)
 
   @@index([hallId])
+  @@index([hallId, verificationStatus])
 }
 
 model PricingRule {
@@ -451,3 +454,10 @@ model ContactMessage {
   @@index([status])
   @@index([createdAt])
 }
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+

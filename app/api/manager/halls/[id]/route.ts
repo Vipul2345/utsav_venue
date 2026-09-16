@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { createAuditLog } from '@/lib/services/auditService';
+import { getSystemSettings } from '@/lib/settings';
 
 export async function GET(
   request: Request,
@@ -74,7 +75,7 @@ export async function PUT(
 
     const hall = await prisma.hall.findFirst({
       where: { id, managerId: managerProfile.id },
-      include: { pricingRule: true },
+      include: { pricingRule: true, media: true },
     });
 
     if (!hall) {
@@ -93,6 +94,7 @@ export async function PUT(
       outsideDecorAllowed,
       cancellationDeadlineHours,
       refundPercentage,
+      media,
     } = body;
 
     // Notice: if major capacity or pricing changes occur, keep track
@@ -118,6 +120,87 @@ export async function PUT(
       });
     }
 
+    // Process media additions / modifications / deletions if passed
+    if (media !== undefined && Array.isArray(media)) {
+      const settings = await getSystemSettings();
+      const cleanMedia = media
+        .filter((m: any) => m && typeof m.url === 'string' && /^https?:\/\/.+/i.test(m.url.trim()))
+        .map((m: any, idx: number) => ({
+          id: m.id || undefined,
+          url: m.url.trim(),
+          caption: m.caption ? m.caption.trim() : null,
+          isCover: m.isCover !== undefined ? Boolean(m.isCover) : idx === 0,
+          displayOrder: idx,
+        }));
+
+      if (cleanMedia.length < 2) {
+        return NextResponse.json(
+          { error: 'A minimum of 2 valid venue photos is required.' },
+          { status: 400 }
+        );
+      }
+
+      if (cleanMedia.length > settings.maxHallImages) {
+        return NextResponse.json(
+          { error: `You cannot upload more than ${settings.maxHallImages} photos per listing.` },
+          { status: 400 }
+        );
+      }
+
+      const existingMediaMap = new Map(hall.media.map((m) => [m.id, m]));
+      const keptIds = new Set<string>();
+
+      for (const item of cleanMedia) {
+        if (item.id && existingMediaMap.has(item.id)) {
+          keptIds.add(item.id);
+          const existing = existingMediaMap.get(item.id)!;
+          const urlChanged = existing.url !== item.url;
+          await prisma.hallMedia.update({
+            where: { id: item.id },
+            data: {
+              url: item.url,
+              caption: item.caption,
+              isCover: item.isCover,
+              displayOrder: item.displayOrder,
+              // If image URL changed, put back into PENDING verification!
+              verificationStatus: urlChanged ? 'PENDING' : existing.verificationStatus,
+              rejectionReason: urlChanged ? null : existing.rejectionReason,
+            },
+          });
+        } else {
+          // New image added post-listing -> start in PENDING verification
+          const created = await prisma.hallMedia.create({
+            data: {
+              hallId: hall.id,
+              url: item.url,
+              caption: item.caption,
+              isCover: item.isCover,
+              displayOrder: item.displayOrder,
+              verificationStatus: 'PENDING',
+            },
+          });
+          keptIds.add(created.id);
+        }
+      }
+
+      // Delete any media removed by manager
+      for (const existing of hall.media) {
+        if (!keptIds.has(existing.id)) {
+          await prisma.hallMedia.delete({
+            where: { id: existing.id },
+          });
+        }
+      }
+    }
+
+    const finalHall = await prisma.hall.findUnique({
+      where: { id: hall.id },
+      include: {
+        pricingRule: true,
+        media: { orderBy: { displayOrder: 'asc' } },
+      },
+    });
+
     await createAuditLog({
       actorId: session.userId,
       actorRole: session.role,
@@ -128,7 +211,7 @@ export async function PUT(
       details: { changes: body },
     });
 
-    return NextResponse.json({ success: true, hall: updatedHall });
+    return NextResponse.json({ success: true, hall: finalHall });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to update hall' }, { status: 500 });
   }

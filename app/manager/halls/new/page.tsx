@@ -57,8 +57,11 @@ export default function NewHallWizardPage() {
   const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([]);
 
   // Step 5: Media & Policies
-  const [mediaUrl1, setMediaUrl1] = useState('https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80');
-  const [mediaUrl2, setMediaUrl2] = useState('https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80');
+  const [mediaUrls, setMediaUrls] = useState<string[]>([
+    'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80',
+  ]);
+  const [maxAllowedImages, setMaxAllowedImages] = useState(5);
   const [alcoholAllowed, setAlcoholAllowed] = useState(false);
   const [outsideCateringAllowed, setOutsideCateringAllowed] = useState(false);
   const [outsideDecorAllowed, setOutsideDecorAllowed] = useState(true);
@@ -75,6 +78,7 @@ export default function NewHallWizardPage() {
         if (res.ok) {
           const data = await res.json();
           setMeta(data);
+          if (data.maxHallImages) setMaxAllowedImages(data.maxHallImages);
           if (data.cities?.length > 0) setCityId(data.cities[0].id);
           // Default select first few occasions & amenities
           if (data.occasions?.length > 0) {
@@ -103,12 +107,42 @@ export default function NewHallWizardPage() {
     );
   };
 
+  const updateMediaUrl = (index: number, val: string) => {
+    setMediaUrls((prev) => {
+      const copy = [...prev];
+      copy[index] = val;
+      return copy;
+    });
+  };
+
+  const addMediaField = () => {
+    if (mediaUrls.length < maxAllowedImages) {
+      setMediaUrls((prev) => [...prev, '']);
+    }
+  };
+
+  const removeMediaField = (index: number) => {
+    if (mediaUrls.length > 2) {
+      setMediaUrls((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const mediaUrls = [mediaUrl1, mediaUrl2].filter(Boolean);
+      const cleanUrls = mediaUrls
+        .map((u) => u.trim())
+        .filter((u) => Boolean(u) && /^https?:\/\/.+/i.test(u));
+
+      if (cleanUrls.length < 2) {
+        throw new Error('Please provide at least 2 valid photo URLs for your venue.');
+      }
+
+      if (cleanUrls.length > maxAllowedImages) {
+        throw new Error(`You can upload at most ${maxAllowedImages} photos as per platform policy.`);
+      }
 
       const res = await fetch('/api/manager/halls', {
         method: 'POST',
@@ -135,7 +169,7 @@ export default function NewHallWizardPage() {
           perPlateNonVegPrice: parseFloat(perPlateNonVegPrice),
           occasionIds: selectedOccasionIds,
           amenityIds: selectedAmenityIds,
-          mediaUrls,
+          mediaUrls: cleanUrls,
           alcoholAllowed,
           outsideCateringAllowed,
           outsideDecorAllowed,
@@ -145,10 +179,10 @@ export default function NewHallWizardPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to submit hall listing');
+      if (!res.ok) throw new Error(data.error || 'Failed to list venue');
 
-      // Success -> Redirect to manager venues list
       router.push('/manager/halls');
+      router.refresh();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -520,27 +554,58 @@ export default function NewHallWizardPage() {
           <div className="space-y-4 text-xs">
             <h2 className="text-base font-extrabold text-stone-900">Step 5: Media Gallery & Policies</h2>
 
-            <div className="space-y-2">
-              <label className="block font-semibold text-stone-700">Cover Photo URL *</label>
-              <input
-                type="url"
-                required
-                value={mediaUrl1}
-                onChange={(e) => setMediaUrl1(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block font-bold text-stone-800 uppercase text-[11px]">
+                    Venue Photos & Media Gallery *
+                  </label>
+                  <p className="text-[11px] text-stone-500">
+                    Provide at least 2 and up to {maxAllowedImages} photo URLs. Photo 1 acts as the primary Cover Photo.
+                  </p>
+                </div>
+                {mediaUrls.length < maxAllowedImages && (
+                  <button
+                    type="button"
+                    onClick={addMediaField}
+                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-[11px] transition"
+                  >
+                    + Add Photo URL
+                  </button>
+                )}
+              </div>
 
-            <div className="space-y-2">
-              <label className="block font-semibold text-stone-700">Additional Gallery Photo URL</label>
-              <input
-                type="url"
-                value={mediaUrl2}
-                onChange={(e) => setMediaUrl2(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500"
-              />
+              <div className="space-y-2.5">
+                {mediaUrls.map((url, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="w-16 text-[10px] font-bold text-stone-500 uppercase shrink-0">
+                      {idx === 0 ? 'Cover Photo' : `Photo #${idx + 1}`}
+                    </span>
+                    <input
+                      type="url"
+                      required={idx < 2}
+                      value={url}
+                      onChange={(e) => updateMediaUrl(idx, e.target.value)}
+                      placeholder={`https://example.com/venue-photo-${idx + 1}.jpg`}
+                      className="flex-1 px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 text-xs"
+                    />
+                    {mediaUrls.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeMediaField(idx)}
+                        className="px-2.5 py-2 text-rose-600 hover:bg-rose-50 rounded-xl transition text-xs font-bold"
+                        title="Remove photo field"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3 bg-amber-50/70 border border-amber-200/70 rounded-xl text-[11px] text-amber-900">
+                <span className="font-bold">🛡️ Moderation Policy:</span> All uploaded photos enter admin verification mode upon listing. They will become live on the customer marketplace once reviewed and approved by a platform administrator.
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-3 border-t border-stone-100">

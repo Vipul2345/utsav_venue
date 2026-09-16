@@ -22,7 +22,10 @@ export async function GET(
             verificationStatus: true,
           },
         },
-        media: { orderBy: { displayOrder: 'asc' } },
+        media: {
+          where: { verificationStatus: 'APPROVED' },
+          orderBy: { displayOrder: 'asc' },
+        },
         pricingRule: true,
         addons: true,
         occasions: {

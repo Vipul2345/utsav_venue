@@ -39,9 +39,29 @@ function RegisterContent() {
   // Manager specific fields
   const [businessName, setBusinessName] = useState('');
   const [city, setCity] = useState('Bangalore');
+  const [availableCities, setAvailableCities] = useState<any[]>([]);
   const [address, setAddress] = useState('');
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [taxId, setTaxId] = useState('');
+
+  // Load active cities for manager signup
+  useEffect(() => {
+    async function loadCities() {
+      try {
+        const res = await fetch('/api/meta');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.cities && data.cities.length > 0) {
+            setAvailableCities(data.cities);
+            setCity(data.cities[0].name);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load cities for registration:', e);
+      }
+    }
+    loadCities();
+  }, []);
 
   // OTP Verification state
   const [step, setStep] = useState<'REGISTER' | 'OTP'>('REGISTER');
@@ -290,15 +310,17 @@ function RegisterContent() {
 
                 <div>
                   <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
-                    Phone Number
+                    Phone Number {role === 'MANAGER' ? '*' : '(Optional)'}
                   </label>
                   <input
                     type="tel"
+                    maxLength={10}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                     placeholder="9876543210"
                     className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
+                  <span className="text-[10px] text-stone-400">10 digits, starts with 6-9</span>
                 </div>
               </div>
 
@@ -416,15 +438,30 @@ function RegisterContent() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1">City *</label>
-                      <input
-                        type="text"
-                        required
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="e.g. Bangalore"
-                        className="w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm"
-                      />
+                      <label className="block text-xs font-medium text-stone-600 mb-1">Operating City *</label>
+                      {availableCities.length > 0 ? (
+                        <select
+                          required
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          className="w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        >
+                          {availableCities.map((c: any) => (
+                            <option key={c.id || c.name} value={c.name}>
+                              {c.name} ({c.state})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          required
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="e.g. Bangalore"
+                          className="w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm"
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-stone-600 mb-1">GST / Tax ID</label>

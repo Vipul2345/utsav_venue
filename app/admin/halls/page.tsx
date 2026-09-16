@@ -87,6 +87,81 @@ export default function AdminHallsPage() {
     }
   };
 
+  const handleMediaAction = async (mediaId: string, action: string, reason?: string) => {
+    if (!selectedHall) return;
+    setActionInProgress(true);
+    try {
+      const res = await fetch('/api/admin/halls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hallId: selectedHall.id,
+          mediaId,
+          action,
+          rejectionReason: reason,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Media action failed');
+
+      // Update in selectedHall
+      setSelectedHall((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          media: prev.media?.map((m: any) =>
+            m.id === mediaId
+              ? {
+                  ...m,
+                  verificationStatus: action === 'APPROVE_MEDIA' ? 'APPROVED' : 'REJECTED',
+                  rejectionReason: action === 'REJECT_MEDIA' ? reason : null,
+                }
+              : m
+          ),
+        };
+      });
+      fetchHalls();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionInProgress(false);
+    }
+  };
+
+  const handleApproveAllMedia = async () => {
+    if (!selectedHall) return;
+    setActionInProgress(true);
+    try {
+      const res = await fetch('/api/admin/halls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hallId: selectedHall.id,
+          action: 'APPROVE_ALL_MEDIA',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to approve photos');
+
+      setSelectedHall((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          media: prev.media?.map((m: any) => ({
+            ...m,
+            verificationStatus: 'APPROVED',
+            rejectionReason: null,
+          })),
+        };
+      });
+      fetchHalls();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionInProgress(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="border-b border-stone-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -310,6 +385,104 @@ export default function AdminHallsPage() {
                     >
                       {ho.occasion?.name} ({ho.status})
                     </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Photo Gallery Moderation */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <h4 className="font-bold text-stone-800 flex items-center gap-1.5">
+                    <span>Venue Photos & Moderation</span>
+                    <span className="text-[10px] text-stone-400 font-normal">
+                      ({selectedHall.media?.length || 0} total)
+                    </span>
+                  </h4>
+                  {selectedHall.media?.some((m: any) => m.verificationStatus !== 'APPROVED') && (
+                    <button
+                      type="button"
+                      disabled={actionInProgress}
+                      onClick={handleApproveAllMedia}
+                      className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[10px] font-bold transition"
+                    >
+                      ✓ Approve All Photos
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {selectedHall.media?.map((m: any, idx: number) => (
+                    <div
+                      key={m.id || idx}
+                      className="p-2.5 bg-stone-50 border border-stone-200 rounded-xl flex items-center gap-2.5"
+                    >
+                      <div className="w-14 h-12 rounded-lg bg-stone-200 overflow-hidden shrink-0 border border-stone-300 relative">
+                        <img
+                          src={m.url}
+                          alt={`Photo ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e: any) => {
+                            e.target.src = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=150&q=80';
+                          }}
+                        />
+                        {m.isCover && (
+                          <span className="absolute bottom-0 inset-x-0 bg-purple-700 text-white text-[7px] font-black text-center py-0.5">
+                            COVER
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-[10px] font-bold text-stone-600 truncate">
+                            #{idx + 1} {m.isCover ? 'Cover' : 'Gallery'}
+                          </span>
+                          <span
+                            className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                              m.verificationStatus === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : m.verificationStatus === 'REJECTED'
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {m.verificationStatus || 'APPROVED'}
+                          </span>
+                        </div>
+
+                        {m.rejectionReason && (
+                          <p className="text-[9px] text-rose-600 truncate mb-1">
+                            {m.rejectionReason}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-1.5">
+                          {m.verificationStatus !== 'APPROVED' && (
+                            <button
+                              type="button"
+                              disabled={actionInProgress}
+                              onClick={() => handleMediaAction(m.id, 'APPROVE_MEDIA')}
+                              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {m.verificationStatus !== 'REJECTED' && (
+                            <button
+                              type="button"
+                              disabled={actionInProgress}
+                              onClick={() => {
+                                const reason = prompt('Enter photo rejection reason:', 'Photo is unclear or does not match venue details');
+                                if (reason) handleMediaAction(m.id, 'REJECT_MEDIA', reason);
+                              }}
+                              className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded text-[10px] font-bold transition"
+                            >
+                              Reject
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

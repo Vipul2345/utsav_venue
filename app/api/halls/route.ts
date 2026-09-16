@@ -64,7 +64,10 @@ export async function GET(request: Request) {
       include: {
         city: true,
         locality: true,
-        media: { orderBy: { displayOrder: 'asc' } },
+        media: {
+          where: { verificationStatus: 'APPROVED' },
+          orderBy: { displayOrder: 'asc' },
+        },
         pricingRule: true,
         occasions: {
           where: { status: 'APPROVED' },
