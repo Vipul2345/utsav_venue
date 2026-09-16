@@ -15,6 +15,7 @@ model User {
   phone        String?
   role         String    @default("CUSTOMER") // CUSTOMER, MANAGER, ADMIN
   isActive     Boolean   @default(true)
+  isEmailVerified Boolean @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -67,6 +68,7 @@ model City {
   name      String     @unique
   slug      String     @unique
   state     String
+  country   String     @default("India")
   isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())
 
@@ -74,6 +76,8 @@ model City {
   halls      Hall[]
 
   @@index([slug])
+  @@index([state])
+  @@index([country])
 }
 
 model Locality {
@@ -81,6 +85,7 @@ model Locality {
   cityId    String
   name      String
   slug      String
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
   city  City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
@@ -416,5 +421,33 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([action])
+  @@index([createdAt])
+}
+
+model EmailOtp {
+  id          String   @id @default(uuid())
+  email       String
+  otpHash     String
+  purpose     String   @default("REGISTRATION") // REGISTRATION, VERIFICATION, PASSWORD_RESET
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(5)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([email, purpose])
+  @@index([expiresAt])
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    String   @default("UNREAD") // UNREAD, READ, RESOLVED
+  createdAt DateTime @default(now())
+
+  @@index([status])
   @@index([createdAt])
 }

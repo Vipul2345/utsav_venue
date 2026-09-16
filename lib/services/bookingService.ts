@@ -93,6 +93,14 @@ export async function createBookingWithLock(input: CreateBookingInput) {
       throw new Error(`Guest count exceeds venue maximum capacity of ${hall.maxCapacity}`);
     }
 
+    // Verify customer is email-verified
+    const customer = await tx.user.findUnique({
+      where: { id: customerId },
+    });
+    if (customer && customer.role === 'CUSTOMER' && !customer.isEmailVerified) {
+      throw new Error('Please verify your email address with OTP before placing a booking.');
+    }
+
     // 2. Concurrency Check: Availability Blocks (blackout)
     const blocks = await tx.availabilityBlock.findMany({
       where: {

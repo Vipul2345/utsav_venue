@@ -40,6 +40,7 @@ export default function HomePage() {
   const router = useRouter();
 
   // Search state
+  const [cities, setCities] = useState<any[]>(CITIES);
   const [selectedCity, setSelectedCity] = useState('bangalore');
   const [selectedOccasion, setSelectedOccasion] = useState('wedding');
   const [eventDate, setEventDate] = useState('');
@@ -48,6 +49,27 @@ export default function HomePage() {
   // Dynamic ranking data from backend
   const [topHalls, setTopHalls] = useState<any[]>([]);
   const [loadingTop, setLoadingTop] = useState(true);
+
+  // Load dynamic active cities from /api/meta
+  useEffect(() => {
+    async function loadMeta() {
+      try {
+        const res = await fetch('/api/meta');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.cities && data.cities.length > 0) {
+            setCities(data.cities);
+            if (!data.cities.some((c: any) => c.slug === selectedCity)) {
+              setSelectedCity(data.cities[0].slug);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load cities meta:', e);
+      }
+    }
+    loadMeta();
+  }, []);
 
   // Fetch dynamic Top 10 halls for the selected city
   useEffect(() => {
@@ -115,7 +137,7 @@ export default function HomePage() {
                     onChange={(e) => setSelectedCity(e.target.value)}
                     className="w-full pl-9 pr-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
-                    {CITIES.map((c) => (
+                    {cities.map((c: any) => (
                       <option key={c.slug} value={c.slug}>
                         {c.name}
                       </option>
@@ -201,7 +223,7 @@ export default function HomePage() {
           <div>
             <h2 className="text-xl font-extrabold text-stone-900 tracking-tight flex items-center gap-2">
               <Award className="w-5 h-5 text-amber-600" />
-              <span>Top 10 Rated Halls in {CITIES.find((c) => c.slug === selectedCity)?.name}</span>
+              <span>Top 10 Rated Halls in {cities.find((c: any) => c.slug === selectedCity)?.name || selectedCity}</span>
             </h2>
             <p className="text-xs text-stone-500">
               Ranked dynamically by verified guest ratings, capacity suitability, and booking reliability.
@@ -209,7 +231,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            {CITIES.map((c) => (
+            {cities.map((c: any) => (
               <button
                 key={c.slug}
                 onClick={() => setSelectedCity(c.slug)}

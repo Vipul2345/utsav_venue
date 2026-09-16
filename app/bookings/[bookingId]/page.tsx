@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -18,6 +18,7 @@ import {
   Mail,
   ArrowLeft,
 } from 'lucide-react';
+import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
 export default function BookingDetailsPage() {
   const params = useParams();
@@ -28,11 +29,14 @@ export default function BookingDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cancellation state
+  // Cancellation modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+  const cancelModalRef = useRef<HTMLDivElement>(null);
+
+  useModalDismiss(cancelModalRef, () => setShowCancelModal(false), showCancelModal);
 
   const fetchBooking = async () => {
     setLoading(true);
@@ -272,8 +276,15 @@ export default function BookingDetailsPage() {
 
       {/* Cancellation Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setShowCancelModal(false)}
+        >
+          <div
+            ref={cancelModalRef}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150"
+          >
             <h3 className="text-base font-bold text-stone-900">Cancel Booking {booking.bookingNumber}?</h3>
             <p className="text-xs text-stone-600 leading-relaxed">
               Based on {booking.hall.name}'s policy, cancellations more than {booking.hall.cancellationDeadlineHours || 72} hours in advance receive an automated {booking.hall.refundPercentage || 80}% refund.

@@ -33,6 +33,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
     }
 
+    if (user.role === 'CUSTOMER' && !user.isEmailVerified) {
+      return NextResponse.json(
+        {
+          error: 'Your email address has not been verified. Please verify your account with OTP.',
+          needVerification: true,
+          email: user.email,
+        },
+        { status: 403 }
+      );
+    }
+
     let parsedPermissions: string[] = [];
     if (user.adminProfile?.permissions) {
       try {

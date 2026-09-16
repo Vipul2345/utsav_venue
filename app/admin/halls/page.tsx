@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Building2,
@@ -15,6 +15,7 @@ import {
   Filter,
   Sparkles,
 } from 'lucide-react';
+import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
 export default function AdminHallsPage() {
   const [halls, setHalls] = useState<any[]>([]);
@@ -27,6 +28,16 @@ export default function AdminHallsPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [actionInProgress, setActionInProgress] = useState(false);
+  const hallModalRef = useRef<HTMLDivElement>(null);
+
+  useModalDismiss(
+    hallModalRef,
+    () => {
+      setSelectedHall(null);
+      setShowRejectBox(false);
+    },
+    !!selectedHall
+  );
 
   const fetchHalls = async () => {
     setLoading(true);
@@ -234,8 +245,18 @@ export default function AdminHallsPage() {
 
       {/* Hall Inspection / Rejection Modal */}
       {selectedHall && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => {
+            setSelectedHall(null);
+            setShowRejectBox(false);
+          }}
+        >
+          <div
+            ref={hallModalRef}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150"
+          >
             <div className="flex items-start justify-between border-b border-stone-200 pb-4">
               <div>
                 <span className="text-[10px] font-bold uppercase text-purple-700">{selectedHall.city?.name}</span>

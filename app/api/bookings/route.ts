@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { createBookingWithLock } from '@/lib/services/bookingService';
+import { validateEventDate, validateTimeInterval, validateGuestCount } from '@/lib/validation';
 
 export async function POST(request: Request) {
   try {
@@ -27,6 +28,21 @@ export async function POST(request: Request) {
         { error: 'Missing required booking parameters: venue, occasion, date, time range, and guest count are required.' },
         { status: 400 }
       );
+    }
+
+    const dateVal = validateEventDate(eventDate);
+    if (!dateVal.isValid) {
+      return NextResponse.json({ error: dateVal.error }, { status: 400 });
+    }
+
+    const timeVal = validateTimeInterval(startTime, endTime);
+    if (!timeVal.isValid) {
+      return NextResponse.json({ error: timeVal.error }, { status: 400 });
+    }
+
+    const guestVal = validateGuestCount(guestCount);
+    if (!guestVal.isValid) {
+      return NextResponse.json({ error: guestVal.error }, { status: 400 });
     }
 
     // Attempt booking with atomic transaction and concurrency locking

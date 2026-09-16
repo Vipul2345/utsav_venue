@@ -29,6 +29,7 @@ const ALL_ADMIN_NAV = [
   { name: 'Payments & Revenue', href: '/admin/payments', icon: CreditCard, perm: 'view_payments' },
   { name: 'User Management', href: '/admin/users', icon: Users, perm: 'view_users' },
   { name: 'Review Moderation', href: '/admin/reviews', icon: Star, perm: 'view_reviews' },
+  { name: 'Location Management', href: '/admin/locations', icon: Building2, perm: 'manage_settings' },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileText, perm: 'view_audit_logs' },
   { name: 'Platform Settings', href: '/admin/settings', icon: Settings, perm: 'manage_settings' },
 ];

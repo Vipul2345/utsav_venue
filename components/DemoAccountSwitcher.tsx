@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, UserCheck, Building2, User, RefreshCw, KeyRound } from 'lucide-react';
+import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
 const DEMO_USERS = [
   {
@@ -59,6 +60,9 @@ export default function DemoAccountSwitcher({ currentUser }: { currentUser: any 
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
+  const switcherRef = useRef<HTMLDivElement>(null);
+
+  useModalDismiss(switcherRef, () => setIsOpen(false), isOpen);
 
   const switchAccount = async (email: string, redirect: string) => {
     setLoading(email);
@@ -87,7 +91,7 @@ export default function DemoAccountSwitcher({ currentUser }: { currentUser: any 
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={switcherRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-full shadow-sm transition"

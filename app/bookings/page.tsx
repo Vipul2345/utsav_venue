@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Search,
 } from 'lucide-react';
+import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
 export default function CustomerBookingsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -23,6 +24,9 @@ export default function CustomerBookingsPage() {
 
   // Review modal state
   const [reviewModalBooking, setReviewModalBooking] = useState<any | null>(null);
+  const reviewModalRef = useRef<HTMLDivElement>(null);
+
+  useModalDismiss(reviewModalRef, () => setReviewModalBooking(null), !!reviewModalBooking);
   const [rating, setRating] = useState(5);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewContent, setReviewContent] = useState('');
@@ -269,8 +273,15 @@ export default function CustomerBookingsPage() {
 
       {/* Review Modal */}
       {reviewModalBooking && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setReviewModalBooking(null)}
+        >
+          <div
+            ref={reviewModalRef}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150"
+          >
             <h3 className="text-base font-bold text-stone-900">
               Rate Your Experience at {reviewModalBooking.hall.name}
             </h3>

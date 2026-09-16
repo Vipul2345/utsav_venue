@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, CheckCircle2, XCircle, AlertCircle, RefreshCw, Filter } from 'lucide-react';
+import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
 export default function AdminOccasionsPage() {
   const [hallOccasions, setHallOccasions] = useState<any[]>([]);
@@ -10,6 +11,9 @@ export default function AdminOccasionsPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const rejectModalRef = useRef<HTMLDivElement>(null);
+
+  useModalDismiss(rejectModalRef, () => setRejectingId(null), !!rejectingId);
 
   const fetchOccasions = async () => {
     setLoading(true);
@@ -169,8 +173,15 @@ export default function AdminOccasionsPage() {
 
       {/* Occasion Rejection Dialog */}
       {rejectingId && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setRejectingId(null)}
+        >
+          <div
+            ref={rejectModalRef}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150"
+          >
             <h3 className="text-base font-bold text-stone-900">Reject Proposed Occasion</h3>
             <p className="text-xs text-stone-600">
               This occasion will be immediately blocked and hidden from customer discovery for this hall.

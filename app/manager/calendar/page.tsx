@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -13,6 +13,7 @@ import {
   Lock,
   Trash2,
 } from 'lucide-react';
+import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
 export default function ManagerCalendarPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -23,6 +24,12 @@ export default function ManagerCalendarPage() {
   // Modals state
   const [showExternalModal, setShowExternalModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+
+  const extModalRef = useRef<HTMLDivElement>(null);
+  const blockModalRef = useRef<HTMLDivElement>(null);
+
+  useModalDismiss(extModalRef, () => setShowExternalModal(false), showExternalModal);
+  useModalDismiss(blockModalRef, () => setShowBlockModal(false), showBlockModal);
 
   // External Booking Form State
   const [extHallId, setExtHallId] = useState('');
@@ -302,8 +309,15 @@ export default function ManagerCalendarPage() {
 
       {/* External Booking Modal */}
       {showExternalModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+        <div
+          className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setShowExternalModal(false)}
+        >
+          <div
+            ref={extModalRef}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95"
+          >
             <div>
               <h3 className="text-base font-bold text-stone-900">Record Direct / Phone Booking</h3>
               <p className="text-xs text-stone-500">
@@ -435,8 +449,15 @@ export default function ManagerCalendarPage() {
 
       {/* Block Modal */}
       {showBlockModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setShowBlockModal(false)}
+        >
+          <div
+            ref={blockModalRef}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95"
+          >
             <div>
               <h3 className="text-base font-bold text-stone-900">Block Dates for Maintenance</h3>
               <p className="text-xs text-stone-500">Prevent bookings during repairs or private reservations</p>

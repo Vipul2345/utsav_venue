@@ -6,7 +6,13 @@ export async function GET() {
     const [cities, occasions, amenities] = await Promise.all([
       prisma.city.findMany({
         where: { isActive: true },
-        include: { localities: true },
+        include: {
+          localities: {
+            where: { isActive: true },
+            orderBy: { name: 'asc' },
+          },
+        },
+        orderBy: [{ state: 'asc' }, { name: 'asc' }],
       }),
       prisma.occasion.findMany({
         orderBy: { name: 'asc' },

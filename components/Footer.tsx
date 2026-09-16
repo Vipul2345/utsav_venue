@@ -48,14 +48,14 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Three Portals & Partner */}
+          {/* Quick Links & Portals */}
           <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Portals & Partners</h4>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Company & Support</h4>
             <ul className="space-y-2 text-xs text-stone-400">
-              <li><Link href="/manager" className="text-amber-400 hover:underline flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Hall Manager Portal</Link></li>
-              <li><Link href="/admin" className="text-purple-400 hover:underline flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> Admin Moderation Console</Link></li>
+              <li><Link href="/about" className="hover:text-amber-400 transition">About Utsav Venues</Link></li>
+              <li><Link href="/contact" className="hover:text-amber-400 transition">Contact Concierge</Link></li>
               <li><Link href="/register?role=MANAGER" className="hover:text-amber-400 transition">List Your Venue</Link></li>
-              <li><Link href="/bookings" className="hover:text-amber-400 transition">Customer Booking Lookup</Link></li>
+              <li><Link href="/bookings" className="hover:text-amber-400 transition">Track Your Bookings</Link></li>
             </ul>
           </div>
         </div>

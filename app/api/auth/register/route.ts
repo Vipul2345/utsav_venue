@@ -3,43 +3,106 @@ import prisma from '@/lib/prisma';
 import { hashPassword, setAuthCookie } from '@/lib/auth';
 import { createAuditLog } from '@/lib/services/auditService';
 import { createNotification } from '@/lib/services/notificationService';
+import { generateAndSendOtp } from '@/lib/services/otpService';
+import {
+  isValidEmail,
+  isValidPhone,
+  validatePasswordStrength,
+  validateRequiredString,
+} from '@/lib/validation';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email, password, fullName, phone, role = 'CUSTOMER', businessName, city, address, registrationNumber, taxId } = body;
+    const body = await request.json().catch(() => ({}));
+    const {
+      email,
+      password,
+      fullName,
+      phone,
+      role = 'CUSTOMER',
+      businessName,
+      city,
+      address,
+      registrationNumber,
+      taxId,
+    } = body;
 
-    if (!email || !password || !fullName) {
-      return NextResponse.json({ error: 'Missing required fields: email, password, and fullName are mandatory.' }, { status: 400 });
+    // 1. Mandatory Field Validation
+    const nameCheck = validateRequiredString(fullName, 'Full Name', 2, 100);
+    if (!nameCheck.isValid) {
+      return NextResponse.json({ error: nameCheck.error }, { status: 400 });
     }
 
-    if (password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters long.' }, { status: 400 });
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid email address (e.g. name@example.com).' },
+        { status: 400 }
+      );
     }
 
+    if (phone && !isValidPhone(phone)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid 10-digit mobile phone number.' },
+        { status: 400 }
+      );
+    }
+
+    // 2. Password Strength Validation
+    const passwordCheck = validatePasswordStrength(password);
+    if (!passwordCheck.isValid) {
+      return NextResponse.json(
+        {
+          error: `Password is too weak: ${passwordCheck.feedback.join(', ')}.`,
+          feedback: passwordCheck.feedback,
+        },
+        { status: 400 }
+      );
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 3. Duplicate Account Check
     const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'An account with this email address already exists.' }, { status: 409 });
+      // If user exists and is already verified
+      if (existingUser.isEmailVerified) {
+        return NextResponse.json(
+          { error: 'An account with this email address already exists. Please log in.' },
+          { status: 409 }
+        );
+      } else {
+        // If unverified customer registered earlier, re-send OTP
+        const otpResult = await generateAndSendOtp(normalizedEmail, 'REGISTRATION');
+        return NextResponse.json({
+          success: true,
+          requireOtp: true,
+          email: normalizedEmail,
+          message: 'Account exists but is unverified. A new verification OTP has been sent.',
+          devOtpCode: otpResult.devOtpCode,
+        });
+      }
     }
 
     const passwordHash = await hashPassword(password);
     const assignedRole = role === 'MANAGER' ? 'MANAGER' : 'CUSTOMER';
+    const isCustomer = assignedRole === 'CUSTOMER';
 
     const user = await prisma.user.create({
       data: {
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         passwordHash,
         fullName: fullName.trim(),
-        phone: phone?.trim() || null,
+        phone: phone ? phone.trim() : null,
         role: assignedRole,
+        isEmailVerified: !isCustomer, // Customers start unverified; managers start verified for email, pending for KYC
         managerProfile:
           assignedRole === 'MANAGER'
             ? {
                 create: {
-                  businessName: businessName?.trim() || `${fullName}'s Hospitality`,
+                  businessName: businessName?.trim() || `${fullName.trim()}'s Hospitality`,
                   phone: phone?.trim() || '',
                   city: city || 'Bangalore',
                   address: address || null,
@@ -55,33 +118,6 @@ export async function POST(request: Request) {
       },
     });
 
-    // Notify admins about new manager registration if applicable
-    if (assignedRole === 'MANAGER') {
-      const admins = await prisma.user.findMany({
-        where: { role: 'ADMIN' },
-      });
-      for (const admin of admins) {
-        await createNotification({
-          userId: admin.id,
-          title: 'New Manager Verification Request',
-          message: `${user.fullName} (${user.managerProfile?.businessName}) has applied for a Hall Manager account.`,
-          type: 'APPROVAL',
-          link: '/admin/managers',
-        });
-      }
-    }
-
-    // Set auth cookie session
-    const session = {
-      userId: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      role: user.role as any,
-      managerProfileId: user.managerProfile?.id || null,
-    };
-
-    await setAuthCookie(session);
-
     await createAuditLog({
       actorId: user.id,
       actorRole: user.role,
@@ -89,11 +125,47 @@ export async function POST(request: Request) {
       action: 'USER_REGISTERED',
       entityType: 'USER',
       entityId: user.id,
-      details: { role: user.role },
+      details: { role: user.role, isEmailVerified: user.isEmailVerified },
+    });
+
+    // CUSTOMER FLOW: Generate OTP & do not issue session cookie until verified
+    if (isCustomer) {
+      const otpResult = await generateAndSendOtp(user.email, 'REGISTRATION');
+      return NextResponse.json({
+        success: true,
+        requireOtp: true,
+        email: user.email,
+        message: 'Account created! Please verify your email with the 6-digit OTP code.',
+        devOtpCode: otpResult.devOtpCode,
+      });
+    }
+
+    // MANAGER FLOW: Notify admins about new manager registration and issue session
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+    });
+    for (const admin of admins) {
+      await createNotification({
+        userId: admin.id,
+        title: 'New Manager Verification Request',
+        message: `${user.fullName} (${user.managerProfile?.businessName}) has applied for a Hall Manager account.`,
+        type: 'APPROVAL',
+        link: '/admin/managers',
+      });
+    }
+
+    // Set auth cookie session for manager
+    await setAuthCookie({
+      userId: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role as any,
+      managerProfileId: user.managerProfile?.id || null,
     });
 
     return NextResponse.json({
       success: true,
+      requireOtp: false,
       user: {
         id: user.id,
         email: user.email,
@@ -104,6 +176,9 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error('Registration error:', error);
-    return NextResponse.json({ error: error.message || 'Registration failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Registration failed. Please check inputs.' },
+      { status: 500 }
+    );
   }
 }

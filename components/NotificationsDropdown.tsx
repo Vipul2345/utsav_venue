@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Bell, Check, ExternalLink } from 'lucide-react';
+import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
 export default function NotificationsDropdown({ user }: { user: any }) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useModalDismiss(dropdownRef, () => setIsOpen(false), isOpen);
 
   const fetchNotifications = async () => {
     try {
@@ -43,7 +47,7 @@ export default function NotificationsDropdown({ user }: { user: any }) {
   if (!user) return null;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
