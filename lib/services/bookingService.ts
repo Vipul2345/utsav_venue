@@ -155,7 +155,11 @@ export async function createBookingWithLock(input: CreateBookingInput) {
 
     // 5. Generate Booking Number
     const bookingCount = await tx.booking.count();
-    const bookingNumber = `BK-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}`;
+    let bookingNumber = `BK-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}`;
+    const existingBooking = await tx.booking.findUnique({ where: { bookingNumber } });
+    if (existingBooking) {
+      bookingNumber = `BK-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
 
     // 6. Set temporary payment hold expiration
     const holdExpiresAt = new Date(Date.now() + HOLD_DURATION_MINUTES * 60 * 1000);
@@ -246,7 +250,11 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
     }
 
     const bookingCount = await tx.booking.count();
-    const bookingNumber = `EXT-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}`;
+    let bookingNumber = `EXT-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}`;
+    const existingBooking = await tx.booking.findUnique({ where: { bookingNumber } });
+    if (existingBooking) {
+      bookingNumber = `EXT-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
 
     const booking = await tx.booking.create({
       data: {
@@ -281,10 +289,16 @@ export async function confirmBookingPayment(params: {
   providerTransactionId: string;
   providerSignature?: string;
   amount: number;
+  waitForEmail?: boolean;
 }) {
-  const { bookingId, providerTransactionId, providerSignature, amount } = params;
+  const { bookingId, providerTransactionId, providerSignature, amount, waitForEmail = false } = params;
 
-  return prisma.$transaction(async (tx) => {
+  let emailDeliveryPromise: Promise<any> | null = null;
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Row-level lock ensures strict serialization for concurrent confirmation calls
+    await tx.$executeRaw`SELECT id FROM "Booking" WHERE id = ${bookingId} FOR UPDATE;`;
+
     const booking = await tx.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -300,7 +314,7 @@ export async function confirmBookingPayment(params: {
     }
 
     if (booking.status === 'CONFIRMED') {
-      return booking; // Idempotent
+      return booking; // Idempotent: already confirmed, do not create duplicate payments or duplicate emails
     }
 
     if (booking.status !== 'PAYMENT_PENDING') {
@@ -394,9 +408,9 @@ export async function confirmBookingPayment(params: {
       },
     });
 
-    // Send confirmation email asynchronously via Resend
+    // Send confirmation email asynchronously via Resend (non-blocking side effect)
     if (booking.customer?.email) {
-      sendBookingConfirmationEmail({
+      emailDeliveryPromise = sendBookingConfirmationEmail({
         to: booking.customer.email,
         customerName: booking.customer.fullName,
         bookingNumber: booking.bookingNumber,
@@ -405,11 +419,37 @@ export async function confirmBookingPayment(params: {
         timeSlot: `${booking.startTime} - ${booking.endTime}`,
         guestCount: booking.guestCount,
         totalAmount: Number(booking.totalAmount),
-      }).catch((err) => {
-        console.error('[BOOKING] Error sending confirmation email:', err);
       });
+
+      emailDeliveryPromise
+        .then((res) => {
+          if (!res.success) {
+            console.error(
+              `[BOOKING-EMAIL-FAILURE] Confirmation email delivery failed for ${booking.bookingNumber} to ${booking.customer?.email}:`,
+              res.error
+            );
+          } else {
+            console.log(
+              `[BOOKING-EMAIL-SUCCESS] Confirmation email delivered for ${booking.bookingNumber} (ID: ${res.messageId || 'simulated'})`
+            );
+          }
+        })
+        .catch((err) => {
+          console.error(`[BOOKING-EMAIL-ERROR] Unexpected error dispatching confirmation email for ${booking.bookingNumber}:`, err);
+        });
     }
 
     return updated;
   });
+
+  if (waitForEmail && emailDeliveryPromise) {
+    try {
+      await emailDeliveryPromise;
+    } catch {
+      // Non-blocking: email failure never rolls back the confirmed booking
+    }
+  }
+
+  (result as any).emailDeliveryPromise = emailDeliveryPromise;
+  return result;
 }

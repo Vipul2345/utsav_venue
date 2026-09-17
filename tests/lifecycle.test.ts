@@ -23,8 +23,17 @@ describe('End-to-End System Lifecycle Scenario', () => {
       include: { adminProfile: true },
     });
 
-    testCustomer = await prisma.user.findFirst({
-      where: { email: 'rahul.verma@example.com' },
+    testCustomer = await prisma.user.upsert({
+      where: { email: 'delivered@resend.dev' },
+      update: { isActive: true },
+      create: {
+        email: 'delivered@resend.dev',
+        fullName: 'Rahul Verma (Resend E2E)',
+        passwordHash: 'dummy_hash_for_lifecycle_test',
+        phone: '+919845011111',
+        role: 'CUSTOMER',
+        isActive: true,
+      },
     });
 
     weddingOccasion = await prisma.occasion.findFirst({ where: { slug: 'wedding' } });
@@ -269,9 +278,14 @@ describe('End-to-End System Lifecycle Scenario', () => {
       bookingId: booking.id,
       amount: pricing.totalAmount,
       providerTransactionId: 'UPI-E2E-TEST-998811',
+      waitForEmail: true,
     });
 
     expect(confirmedBooking.status).toBe('CONFIRMED');
+    if ((confirmedBooking as any).emailDeliveryPromise) {
+      const emailRes = await (confirmedBooking as any).emailDeliveryPromise;
+      expect(emailRes.success).toBe(true);
+    }
 
     const isAvail = await checkHallAvailability({
       hallId: createdHall.id,

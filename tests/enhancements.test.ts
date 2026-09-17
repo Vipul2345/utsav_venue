@@ -96,8 +96,13 @@ describe('Targeted Enhancements & Security Verification Suite', () => {
    * 2. CUSTOMER EMAIL OTP VERIFICATION TESTS
    * ========================================================================= */
   describe('2. Customer Email OTP Lifecycle & Security', () => {
-    const testEmail = `test.otp.${Date.now()}@example.com`;
+    // Use Resend verified testing address to avoid 422 validation_error
+    const testEmail = 'delivered@resend.dev';
     let generatedOtp: string;
+
+    beforeAll(async () => {
+      await prisma.emailOtp.deleteMany({ where: { email: testEmail } });
+    });
 
     it('generates cryptographic 6-digit OTP and stores hash securely', async () => {
       const res = await generateAndSendOtp(testEmail, 'REGISTRATION');
@@ -106,6 +111,12 @@ describe('Targeted Enhancements & Security Verification Suite', () => {
       expect(res.devOtpCode?.length).toBe(6);
       expect(Number(res.devOtpCode)).toBeGreaterThanOrEqual(100000);
       generatedOtp = res.devOtpCode!;
+
+      // Verify that real Resend email delivery succeeded without 422 validation errors
+      if (res.emailDeliveryPromise) {
+        const emailResult = await res.emailDeliveryPromise;
+        expect(emailResult.success).toBe(true);
+      }
 
       // Verify in DB that plaintext OTP is NOT stored (only otpHash)
       const record = await prisma.emailOtp.findFirst({
