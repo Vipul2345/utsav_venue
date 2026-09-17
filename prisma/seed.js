@@ -476,7 +476,7 @@ async function main() {
       media: {
         create: [
           {
-            url: 'https://images.unsplash.com/photo-1545232979-fbf68fe9b1a6?auto=format&fit=crop&w=1200&q=80',
+            url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80',
             caption: 'Spacious banquet hall with elegant drape work',
             isCover: true,
             displayOrder: 1,

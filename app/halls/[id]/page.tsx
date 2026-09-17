@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
@@ -39,6 +39,7 @@ const VenueMap = dynamic(() => import('@/components/VenueMap'), {
 export default function HallDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const hallId = params.id as string;
 
   const [hall, setHall] = useState<any>(null);
@@ -60,12 +61,12 @@ export default function HallDetailsPage() {
   const [pricingBreakdown, setPricingBreakdown] = useState<any>(null);
   const [calculatingPrice, setCalculatingPrice] = useState(false);
 
-  // Availability status
+  // Availability status - starts unverified until dates are chosen
   const [availabilityStatus, setAvailabilityStatus] = useState<{
     checked: boolean;
     available: boolean;
     conflictReason?: string;
-  }>({ checked: false, available: true });
+  }>({ checked: false, available: false });
 
   // Verified Customer Review State
   const [eligibleBooking, setEligibleBooking] = useState<any>(null);
@@ -82,8 +83,16 @@ export default function HallDetailsPage() {
       setLoading(true);
       try {
         const res = await fetch(`/api/halls/${hallId}`);
+        if (res.status === 404) {
+          notFound();
+          return;
+        }
         if (!res.ok) throw new Error('Venue not found');
         const data = await res.json();
+        if (!data.hall) {
+          notFound();
+          return;
+        }
         setHall(data.hall);
 
         // Pre-select first approved occasion
@@ -152,16 +161,15 @@ export default function HallDetailsPage() {
     }
   };
 
-  // Set default date range (1 month in future, 1 day duration)
+  // Pre-fill date range from URL query parameters if provided
   useEffect(() => {
-    if (!startDate) {
-      const future = new Date();
-      future.setDate(future.getDate() + 30);
-      const str = future.toISOString().split('T')[0];
-      setStartDate(str);
-      setEndDate(str);
+    const qStart = searchParams.get('startDate') || searchParams.get('date');
+    const qEnd = searchParams.get('endDate') || qStart;
+    if (qStart) {
+      setStartDate(qStart);
+      setEndDate(qEnd || qStart);
     }
-  }, []);
+  }, [searchParams]);
 
   const handleStartDateChange = (val: string) => {
     setStartDate(val);
@@ -250,7 +258,7 @@ export default function HallDetailsPage() {
   };
 
   const handleProceedBooking = () => {
-    if (!availabilityStatus.available) return;
+    if (!startDate || !endDate || !availabilityStatus.available) return;
 
     // Navigate to checkout with pre-selected parameters
     const params = new URLSearchParams({
@@ -278,16 +286,8 @@ export default function HallDetailsPage() {
   }
 
   if (error || !hall) {
-    return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-rose-600 mx-auto" />
-        <h2 className="text-xl font-bold text-stone-900">Venue Not Available</h2>
-        <p className="text-xs text-stone-500">The requested venue could not be found or is not currently active.</p>
-        <Link href="/search" className="inline-block px-4 py-2 bg-amber-600 text-white font-bold text-xs rounded-xl shadow">
-          Browse Active Venues
-        </Link>
-      </div>
-    );
+    notFound();
+    return null;
   }
 
   const mediaList = hall.media || [];
@@ -909,8 +909,13 @@ export default function HallDetailsPage() {
               </div>
             )}
 
-            {/* Slot Conflict Check Alert */}
-            {availabilityStatus.checked && !availabilityStatus.available && (
+            {/* Slot Conflict Check Alert / Date Selection Prompt */}
+            {!startDate || !endDate ? (
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl flex items-center gap-2">
+                <Info className="w-4 h-4 text-amber-700 shrink-0" />
+                <span className="font-semibold">Select your dates to verify slot availability</span>
+              </div>
+            ) : availabilityStatus.checked && !availabilityStatus.available ? (
               <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
@@ -918,14 +923,12 @@ export default function HallDetailsPage() {
                   <p className="text-[11px]">{availabilityStatus.conflictReason}</p>
                 </div>
               </div>
-            )}
-
-            {availabilityStatus.checked && availabilityStatus.available && (
+            ) : availabilityStatus.checked && availabilityStatus.available ? (
               <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
                 <Check className="w-4 h-4 shrink-0" />
                 <span className="font-bold">This time slot is available for instant lock!</span>
               </div>
-            )}
+            ) : null}
 
             {/* Server Authoritative Price Breakdown */}
             {pricingBreakdown && (
@@ -992,15 +995,21 @@ export default function HallDetailsPage() {
             {/* Book Now Button */}
             <button
               type="button"
-              disabled={!availabilityStatus.available || calculatingPrice}
+              disabled={!startDate || !endDate || !availabilityStatus.available || calculatingPrice}
               onClick={handleProceedBooking}
               className={`w-full py-3.5 px-4 font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 min-h-[44px] ${
-                availabilityStatus.available && !calculatingPrice
+                startDate && endDate && availabilityStatus.available && !calculatingPrice
                   ? 'bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white cursor-pointer'
                   : 'bg-stone-300 text-stone-500 cursor-not-allowed'
               }`}
             >
-              <span>{availabilityStatus.available ? 'Proceed to Book Slot' : 'Select Another Slot'}</span>
+              <span>
+                {!startDate || !endDate
+                  ? 'Select Dates to Check Availability'
+                  : availabilityStatus.available
+                  ? 'Proceed to Book Slot'
+                  : 'Select Another Slot'}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
@@ -1029,9 +1038,9 @@ export default function HallDetailsPage() {
 
         <button
           type="button"
-          disabled={!availabilityStatus.available || calculatingPrice}
+          disabled={calculatingPrice}
           onClick={() => {
-            if (availabilityStatus.available && !calculatingPrice) {
+            if (startDate && endDate && availabilityStatus.available && !calculatingPrice) {
               handleProceedBooking();
             } else {
               const widget = document.getElementById('booking-widget');
@@ -1041,12 +1050,18 @@ export default function HallDetailsPage() {
             }
           }}
           className={`px-5 py-2.5 font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 min-h-[44px] ${
-            availabilityStatus.available && !calculatingPrice
+            startDate && endDate && availabilityStatus.available && !calculatingPrice
               ? 'bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white cursor-pointer'
-              : 'bg-stone-300 text-stone-500 cursor-not-allowed'
+              : 'bg-amber-100 text-amber-900 border border-amber-300 cursor-pointer font-bold'
           }`}
         >
-          <span>{availabilityStatus.available ? 'Proceed to book slot' : 'Check Dates'}</span>
+          <span>
+            {!startDate || !endDate
+              ? 'Check Dates'
+              : availabilityStatus.available
+              ? 'Proceed to book slot'
+              : 'Check Dates'}
+          </span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>

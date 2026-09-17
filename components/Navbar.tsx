@@ -94,7 +94,7 @@ export default function Navbar() {
             </Link>
 
             {/* Role-Specific Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
+            <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
               {/* ANONYMOUS USER NAVIGATION */}
               {!user && (
                 <>
@@ -472,7 +472,7 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Mobile menu toggle */}
+            {/* Mobile / Tablet menu toggle */}
             <button
               ref={mobileMenuButtonRef}
               type="button"
@@ -482,7 +482,7 @@ export default function Navbar() {
                 setMobileMenuOpen((prev) => !prev);
                 setUserMenuOpen(false);
               }}
-              className="md:hidden p-2 text-stone-700 hover:bg-amber-50 rounded-xl min-w-[40px] min-h-[40px] flex items-center justify-center transition"
+              className="lg:hidden p-2 text-stone-700 hover:bg-amber-50 rounded-xl min-w-[40px] min-h-[40px] flex items-center justify-center transition"
               aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
               aria-expanded={mobileMenuOpen}
             >
@@ -492,22 +492,22 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Role-Specific Mobile Nav Drawer */}
+      {/* Role-Specific Mobile & Tablet Nav Drawer */}
       {mobileMenuOpen && (
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 top-16 bg-stone-900/50 backdrop-blur-sm z-30 md:hidden animate-in fade-in duration-150"
+            className="fixed inset-0 top-16 bg-stone-900/50 backdrop-blur-sm z-30 lg:hidden animate-in fade-in duration-150"
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
 
           <div
             ref={mobileMenuRef}
-            className="md:hidden fixed top-16 left-0 right-0 max-h-[calc(100vh-4rem)] overflow-y-auto z-40 bg-white border-b border-stone-200 shadow-2xl px-5 pt-3 pb-6 space-y-2.5 animate-in slide-in-from-top-2 duration-150"
+            className="lg:hidden fixed top-16 left-0 right-0 max-h-[calc(100vh-4rem)] overflow-y-auto z-40 bg-white border-b border-stone-200 shadow-2xl px-5 pt-3 pb-6 space-y-2.5 animate-in slide-in-from-top-2 duration-150"
           >
-            {/* Mobile Drawer Header */}
-            <div className="flex items-center justify-between pb-2.5 border-b border-stone-100 sm:hidden">
+            {/* Mobile & Tablet Drawer Header */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-stone-100">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center text-white text-xs">
                   <Sparkles className="w-3.5 h-3.5" />
@@ -527,7 +527,7 @@ export default function Navbar() {
               </button>
             </div>
 
-            {/* Mobile Quick Demo Role Switcher */}
+            {/* Quick Demo Role Switcher */}
             <div className="pb-3 border-b border-stone-100 sm:hidden">
               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block mb-1.5 px-1">
                 Demo Quick Role Switcher

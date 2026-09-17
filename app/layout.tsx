@@ -6,6 +6,10 @@ import Footer from '@/components/Footer';
 export const metadata: Metadata = {
   title: 'UTSAV VENUES | Banquet Halls & Event Venue Booking Platform',
   description: 'Book verified banquet halls, marriage palaces, and luxury event venues across Bangalore, Mumbai, Delhi NCR, Hyderabad, and Chennai.',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
