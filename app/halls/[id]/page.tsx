@@ -66,6 +66,15 @@ export default function HallDetailsPage() {
     conflictReason?: string;
   }>({ checked: false, available: true });
 
+  // Verified Customer Review State
+  const [eligibleBooking, setEligibleBooking] = useState<any>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewContent, setReviewContent] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+
   // Fetch hall details
   useEffect(() => {
     async function fetchHall() {
@@ -84,6 +93,17 @@ export default function HallDetailsPage() {
         if (data.hall.minCapacity) {
           setGuestCount(Math.max(data.hall.minCapacity, Math.min(300, data.hall.maxCapacity)));
         }
+
+        // Check if viewing customer has an eligible completed booking ready to review
+        try {
+          const revRes = await fetch(`/api/reviews?hallId=${data.hall.id}`);
+          if (revRes.ok) {
+            const revData = await revRes.json();
+            setEligibleBooking(revData.eligibleBooking || null);
+          }
+        } catch {
+          // Non-blocking for unauthenticated or non-customer sessions
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -92,6 +112,44 @@ export default function HallDetailsPage() {
     }
     fetchHall();
   }, [hallId]);
+
+  const handleSubmitHallReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eligibleBooking || !hall) return;
+    setSubmittingReview(true);
+    setReviewError(null);
+
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: eligibleBooking.id,
+          hallId: hall.id,
+          rating: reviewRating,
+          title: reviewTitle,
+          content: reviewContent,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit review');
+
+      setReviewSuccess(true);
+      setEligibleBooking(null);
+
+      // Refresh hall data to reflect new review and updated rating
+      const refreshRes = await fetch(`/api/halls/${hallId}`);
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        setHall(refreshData.hall);
+      }
+    } catch (err: any) {
+      setReviewError(err.message);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   // Set default date (e.g. 1 month in future)
   useEffect(() => {
@@ -457,6 +515,97 @@ export default function HallDetailsPage() {
                 <span>{hall.averageRating} / 5.0</span>
               </div>
             </div>
+
+            {/* Eligible Verified Customer Review Card */}
+            {eligibleBooking && (
+              <div className="bg-gradient-to-br from-amber-50/70 via-white to-stone-50 border border-amber-300/80 rounded-2xl p-5 space-y-3.5 shadow-sm">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
+                    Verified Host ({eligibleBooking.bookingNumber})
+                  </span>
+                  <h3 className="text-sm font-extrabold text-stone-900 mt-1.5">
+                    Your booking is complete. How was your experience?
+                  </h3>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Rate this venue and share your celebration feedback to help future event planners.
+                  </p>
+                </div>
+
+                {reviewSuccess ? (
+                  <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Thank you! Your verified review has been published.</span>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmitHallReview} className="space-y-3 text-xs">
+                    {reviewError && (
+                      <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-200">
+                        {reviewError}
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Your Rating</label>
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setReviewRating(s)}
+                            className="p-1 hover:scale-110 transition min-w-[36px] min-h-[36px] flex items-center justify-center"
+                            aria-label={`Rate ${s} stars`}
+                          >
+                            <Star
+                              className={`w-6 h-6 ${
+                                s <= reviewRating
+                                  ? 'fill-amber-400 text-amber-500'
+                                  : 'text-stone-300'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                        <span className="text-xs font-bold text-stone-700 ml-2">
+                          {reviewRating} of 5 Stars
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Review Title</label>
+                      <input
+                        type="text"
+                        required
+                        value={reviewTitle}
+                        onChange={(e) => setReviewTitle(e.target.value)}
+                        placeholder="e.g. Magnificent wedding hall and food!"
+                        className="w-full px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Your Written Review *</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={reviewContent}
+                        onChange={(e) => setReviewContent(e.target.value)}
+                        placeholder="Tell other hosts about the stage, parking, air conditioning, and catering service..."
+                        className="w-full px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-xs"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="px-5 py-2.5 min-h-[44px] bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2"
+                    >
+                      <Star className="w-4 h-4 fill-white" />
+                      <span>{submittingReview ? 'Submitting...' : 'Submit Verified Review'}</span>
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
 
             <div className="space-y-3">
               {hall.reviews?.length === 0 ? (

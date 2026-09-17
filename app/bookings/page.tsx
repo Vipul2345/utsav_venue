@@ -80,6 +80,7 @@ export default function CustomerBookingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bookingId: reviewModalBooking.id,
+          hallId: reviewModalBooking.hallId,
           rating,
           title: reviewTitle,
           content: reviewContent,
@@ -254,15 +255,22 @@ export default function CustomerBookingsPage() {
                     <span>View Voucher</span>
                   </Link>
 
-                  {/* Review CTA if completed and not reviewed yet */}
-                  {activeTab === 'PAST' && b.reviews?.length === 0 && (
-                    <button
-                      onClick={() => setReviewModalBooking(b)}
-                      className="flex-1 sm:flex-initial px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm min-h-[40px]"
-                    >
-                      <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                      <span>Write Review</span>
-                    </button>
+                  {/* Review CTA if completed or confirmed and not reviewed yet */}
+                  {(b.status === 'COMPLETED' || b.status === 'CONFIRMED') && !b.cancelledAt && (
+                    b.reviews && b.reviews.length > 0 ? (
+                      <span className="px-2.5 py-2 bg-amber-50 text-amber-900 border border-amber-200/80 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shrink-0 min-h-[40px]">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                        <span>Reviewed ({b.reviews[0].rating}★)</span>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setReviewModalBooking(b)}
+                        className="flex-1 sm:flex-initial px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm min-h-[40px]"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                        <span>Rate & Review</span>
+                      </button>
+                    )
                   )}
                 </div>
               </div>

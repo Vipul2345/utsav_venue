@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Navigation, ExternalLink, MapPin } from 'lucide-react';
 
 interface VenueMapProps {
   latitude?: number | null;
@@ -36,6 +37,15 @@ export default function VenueMap({
     if (lowerCity.includes('pune')) return [18.5204, 73.8567];
     // Default to Bangalore
     return [12.9716, 77.5946];
+  };
+
+  // Generate dynamic Google Maps directions URL
+  const getGoogleMapsDirectionsUrl = (): string => {
+    if (latitude && longitude && !isNaN(Number(latitude)) && !isNaN(Number(longitude))) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${Number(latitude)},${Number(longitude)}`;
+    }
+    const query = [venueName, address, city].filter(Boolean).join(', ');
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
   };
 
   useEffect(() => {
@@ -86,15 +96,30 @@ export default function VenueMap({
   }, [latitude, longitude, venueName, address, city]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div
         ref={mapContainerRef}
         className="w-full h-64 sm:h-80 rounded-2xl overflow-hidden border border-stone-200 shadow-sm z-0"
         style={{ minHeight: '260px' }}
       />
-      <p className="text-[11px] text-stone-500 text-right flex items-center justify-end gap-1">
-        <span>📍 Interactive Venue Location Map via OpenStreetMap</span>
-      </p>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-600">
+          <MapPin className="w-4 h-4 text-amber-600 shrink-0" />
+          <span className="line-clamp-1">{address}{city ? `, ${city}` : ''}</span>
+        </div>
+
+        <a
+          href={getGoogleMapsDirectionsUrl()}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-bold rounded-xl shadow-sm transition hover:shadow shrink-0 w-full sm:w-auto"
+        >
+          <Navigation className="w-4 h-4" />
+          <span>Get Directions</span>
+          <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+        </a>
+      </div>
     </div>
   );
 }

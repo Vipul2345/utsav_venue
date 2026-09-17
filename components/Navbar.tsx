@@ -294,8 +294,10 @@ export default function Navbar() {
 
           {/* Right Action Bar */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            {/* Quick Demo Role Switcher */}
-            <DemoAccountSwitcher currentUser={user} />
+            {/* Quick Demo Role Switcher (Visible on desktop/tablet, shifted to mobile menu drawer on mobile) */}
+            <div className="hidden sm:block">
+              <DemoAccountSwitcher currentUser={user} />
+            </div>
 
             {/* Favorites Icon (Only for Customers or Visitors) */}
             {(!user || isCustomer) && (
@@ -341,82 +343,84 @@ export default function Navbar() {
                 {userMenuOpen && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-56 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-xs"
+                    className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-60 bg-white border border-stone-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-xs"
                   >
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="font-bold text-gray-900 truncate">{user.fullName}</p>
-                      <p className="text-[11px] text-gray-500 truncate">{user.email}</p>
+                    <div className="px-4 py-2.5 border-b border-stone-100">
+                      <p className="font-extrabold text-stone-900 truncate">{user.fullName}</p>
+                      <p className="text-[11px] text-stone-500 truncate">{user.email}</p>
                     </div>
 
-                    {isCustomer && (
-                      <>
-                        <Link
-                          href="/bookings"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700"
-                        >
-                          <Calendar className="w-4 h-4 text-amber-600" />
-                          My Bookings
-                        </Link>
-                        <Link
-                          href="/favorites"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700"
-                        >
-                          <Heart className="w-4 h-4 text-rose-500" />
-                          Saved Venues
-                        </Link>
-                      </>
-                    )}
+                    <div className="py-1">
+                      {isCustomer && (
+                        <>
+                          <Link
+                            href="/bookings"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                          >
+                            <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>My Bookings</span>
+                          </Link>
+                          <Link
+                            href="/favorites"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                          >
+                            <Heart className="w-4 h-4 text-rose-500 shrink-0" />
+                            <span>Saved Venues</span>
+                          </Link>
+                        </>
+                      )}
 
-                    {isManager && (
-                      <>
-                        <Link
-                          href="/manager"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700"
-                        >
-                          <Building2 className="w-4 h-4 text-amber-600" />
-                          Manager Dashboard
-                        </Link>
-                        <Link
-                          href="/manager/profile"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700"
-                        >
-                          <User className="w-4 h-4 text-stone-600" />
-                          Business Profile
-                        </Link>
-                      </>
-                    )}
+                      {isManager && (
+                        <>
+                          <Link
+                            href="/manager"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                          >
+                            <Building2 className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>Manager Dashboard</span>
+                          </Link>
+                          <Link
+                            href="/manager/profile"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                          >
+                            <User className="w-4 h-4 text-stone-600 shrink-0" />
+                            <span>Business Profile</span>
+                          </Link>
+                        </>
+                      )}
 
-                    {isAdmin && (
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                        >
+                          <Shield className="w-4 h-4 text-purple-600 shrink-0" />
+                          <span>Admin Console</span>
+                        </Link>
+                      )}
+
                       <Link
-                        href="/admin"
+                        href="/profile"
                         onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700"
+                        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
                       >
-                        <Shield className="w-4 h-4 text-purple-600" />
-                        Admin Console
+                        <User className="w-4 h-4 text-stone-500 shrink-0" />
+                        <span>Account Settings</span>
                       </Link>
-                    )}
+                    </div>
 
-                    <Link
-                      href="/profile"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700"
-                    >
-                      <User className="w-4 h-4 text-gray-500" />
-                      Account Settings
-                    </Link>
-
-                    <div className="border-t border-gray-100 mt-1 pt-1">
+                    <div className="border-t border-stone-100 pt-1">
                       <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 w-full text-left px-4 py-2 text-rose-600 hover:bg-rose-50"
+                        className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-rose-600 hover:bg-rose-50 font-bold transition min-h-[40px]"
                       >
-                        <LogOut className="w-4 h-4" />
-                        Sign out
+                        <LogOut className="w-4 h-4 shrink-0" />
+                        <span>Sign out</span>
                       </button>
                     </div>
                   </div>
@@ -464,8 +468,111 @@ export default function Navbar() {
 
           <div
             ref={mobileMenuRef}
-            className="md:hidden fixed top-16 left-0 right-0 max-h-[calc(100vh-4rem)] overflow-y-auto z-40 bg-white border-b border-stone-200 shadow-2xl px-5 pt-3 pb-6 space-y-1 animate-in slide-in-from-top-2 duration-150"
+            className="md:hidden fixed top-16 left-0 right-0 max-h-[calc(100vh-4rem)] overflow-y-auto z-40 bg-white border-b border-stone-200 shadow-2xl px-5 pt-3 pb-6 space-y-2 animate-in slide-in-from-top-2 duration-150"
           >
+            {/* Mobile Quick Demo Role Switcher */}
+            <div className="pb-3 border-b border-stone-100 sm:hidden">
+              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block mb-1.5 px-1">
+                Demo Quick Role Switcher
+              </span>
+              <DemoAccountSwitcher currentUser={user} />
+            </div>
+
+            {/* Mobile Logged-in User Account Card */}
+            {user && (
+              <div className="bg-stone-50/80 border border-stone-200/80 rounded-2xl p-3.5 space-y-3 mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                    {user.fullName?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-extrabold text-xs text-stone-900 truncate">{user.fullName}</p>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold shrink-0 ${
+                          isAdmin
+                            ? 'bg-purple-100 text-purple-800'
+                            : isManager
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {isAdmin ? user.adminProfile?.adminRole || 'ADMIN' : user.role}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 truncate">{user.email}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-stone-200/60 grid grid-cols-2 gap-1.5 text-xs font-semibold">
+                  {isCustomer && (
+                    <>
+                      <Link
+                        href="/bookings"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-1.5 p-2 rounded-xl bg-white border border-stone-200/60 text-stone-700 hover:text-amber-800 min-h-[40px]"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className="truncate">My Bookings</span>
+                      </Link>
+                      <Link
+                        href="/favorites"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-1.5 p-2 rounded-xl bg-white border border-stone-200/60 text-stone-700 hover:text-rose-600 min-h-[40px]"
+                      >
+                        <Heart className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span className="truncate">Saved Venues</span>
+                      </Link>
+                    </>
+                  )}
+                  {isManager && (
+                    <>
+                      <Link
+                        href="/manager"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-1.5 p-2 rounded-xl bg-white border border-stone-200/60 text-stone-700 hover:text-amber-800 min-h-[40px]"
+                      >
+                        <Building2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className="truncate">Dashboard</span>
+                      </Link>
+                      <Link
+                        href="/manager/profile"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-1.5 p-2 rounded-xl bg-white border border-stone-200/60 text-stone-700 hover:text-stone-900 min-h-[40px]"
+                      >
+                        <User className="w-3.5 h-3.5 text-stone-600 shrink-0" />
+                        <span className="truncate">Profile</span>
+                      </Link>
+                    </>
+                  )}
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="col-span-2 flex items-center gap-1.5 p-2 rounded-xl bg-white border border-purple-200 text-purple-900 min-h-[40px]"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <span>Admin Console</span>
+                    </Link>
+                  )}
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-1.5 p-2 rounded-xl bg-white border border-stone-200/60 text-stone-700 min-h-[40px]"
+                  >
+                    <User className="w-3.5 h-3.5 text-stone-500 shrink-0" />
+                    <span>Settings</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200/60 text-rose-700 hover:bg-rose-100 min-h-[40px] text-xs font-bold"
+                  >
+                    <LogOut className="w-3.5 h-3.5 shrink-0" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
             {/* Anonymous Mobile Menu */}
             {!user && (
               <>

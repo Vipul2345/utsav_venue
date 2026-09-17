@@ -17,6 +17,7 @@ import {
   Phone,
   Mail,
   ArrowLeft,
+  Star,
 } from 'lucide-react';
 import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
@@ -34,6 +35,13 @@ export default function BookingDetailsPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+  // Review submission state
+  const [rating, setRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewContent, setReviewContent] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
   const cancelModalRef = useRef<HTMLDivElement>(null);
 
   useModalDismiss(cancelModalRef, () => setShowCancelModal(false), showCancelModal);
@@ -49,6 +57,37 @@ export default function BookingDetailsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!booking) return;
+    setSubmittingReview(true);
+    setReviewError(null);
+
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          hallId: booking.hall.id,
+          rating,
+          title: reviewTitle,
+          content: reviewContent,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit review');
+
+      setReviewSuccess(true);
+      await fetchBooking();
+    } catch (err: any) {
+      setReviewError(err.message);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -257,6 +296,131 @@ export default function BookingDetailsPage() {
             </div>
           </div>
         </div>
+
+        {/* Verified Review Section */}
+        {booking.reviews && booking.reviews.length > 0 ? (
+          <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-6 space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-extrabold text-stone-900 flex items-center gap-1.5">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
+                <span>Your Verified Review & Rating</span>
+              </h3>
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`w-3.5 h-3.5 ${
+                      s <= booking.reviews[0].rating
+                        ? 'fill-amber-400 text-amber-500'
+                        : 'text-stone-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            {booking.reviews[0].title && (
+              <p className="font-bold text-xs text-stone-900">{booking.reviews[0].title}</p>
+            )}
+            <p className="text-xs text-stone-700 leading-relaxed">{booking.reviews[0].content}</p>
+            <p className="text-[10px] text-stone-400">
+              Submitted on {new Date(booking.reviews[0].createdAt).toLocaleDateString()}
+            </p>
+          </div>
+        ) : (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') && !booking.cancelledAt ? (
+          <div className="bg-gradient-to-br from-amber-50/40 via-white to-stone-50 border border-amber-200/80 rounded-2xl p-6 space-y-4 shadow-sm">
+            <div>
+              <h3 className="text-sm font-extrabold text-stone-900 flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-600 fill-amber-300" />
+                <span>How was your celebration at {booking.hall.name}?</span>
+              </h3>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Share your verified feedback to help other families and event hosts choose the best venue.
+              </p>
+            </div>
+
+            {reviewSuccess ? (
+              <div className="p-3.5 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Thank you! Your verified review has been submitted.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitReview} className="space-y-3.5 text-xs">
+                {reviewError && (
+                  <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-200">
+                    {reviewError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Your Rating</label>
+                  <div className="flex items-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        className="p-1 hover:scale-110 transition min-w-[36px] min-h-[36px] flex items-center justify-center"
+                        aria-label={`Rate ${star} stars`}
+                      >
+                        <Star
+                          className={`w-6 h-6 ${
+                            star <= rating
+                              ? 'fill-amber-400 text-amber-500'
+                              : 'text-stone-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="text-xs font-bold text-stone-700 ml-2">
+                      {rating === 5
+                        ? '5 Stars (Excellent)'
+                        : rating === 4
+                        ? '4 Stars (Very Good)'
+                        : rating === 3
+                        ? '3 Stars (Average)'
+                        : rating === 2
+                        ? '2 Stars (Poor)'
+                        : '1 Star (Terrible)'}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Review Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={reviewTitle}
+                    onChange={(e) => setReviewTitle(e.target.value)}
+                    placeholder="e.g. Exceptional hall, great stage lighting, and delicious food!"
+                    className="w-full px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Written Feedback</label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={reviewContent}
+                    onChange={(e) => setReviewContent(e.target.value)}
+                    placeholder="Tell other event planners about the stage, parking, air conditioning, and catering service..."
+                    className="w-full px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="px-5 py-2.5 min-h-[44px] bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2"
+                >
+                  <Star className="w-4 h-4 fill-white" />
+                  <span>{submittingReview ? 'Submitting...' : 'Submit Verified Review'}</span>
+                </button>
+              </form>
+            )}
+          </div>
+        ) : null}
 
         {/* Cancellation Notice if applicable */}
         {booking.cancelledAt && (
