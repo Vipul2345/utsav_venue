@@ -48,21 +48,25 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Quick Links & Portals */}
+          {/* For Venue Owners */}
           <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Company & Support</h4>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">For Venue Owners</h4>
             <ul className="space-y-2 text-xs text-stone-300">
-              <li><Link href="/about" className="hover:text-amber-300 transition py-0.5 inline-block">About Utsav Venues</Link></li>
-              <li><Link href="/contact" className="hover:text-amber-300 transition py-0.5 inline-block">Contact Concierge</Link></li>
+              <li><Link href="/list-your-venue" className="hover:text-amber-300 transition py-0.5 inline-block">Partner Guide & Commission</Link></li>
               <li><Link href="/register?role=MANAGER" className="hover:text-amber-300 transition py-0.5 inline-block">List Your Venue</Link></li>
-              <li><Link href="/bookings" className="hover:text-amber-300 transition py-0.5 inline-block">Track Your Bookings</Link></li>
+              <li><Link href="/login" className="hover:text-amber-300 transition py-0.5 inline-block">Manager Portal Sign In</Link></li>
+              <li><Link href="/contact" className="hover:text-amber-300 transition py-0.5 inline-block">Partner Support Desk</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 pt-6 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-300">
-          <p>© 2026 UTSAV Venues Marketplace. Built for high concurrency, multi-city banquet operations.</p>
-          <p className="mt-2 sm:mt-0">Production-Ready Relational Platform</p>
+          <p>© 2026 UTSAV Venues Marketplace. Verified banquet halls with zero double-booking guarantee.</p>
+          <div className="flex items-center gap-4 mt-2 sm:mt-0">
+            <Link href="/about" className="hover:text-white transition">About Us</Link>
+            <Link href="/contact" className="hover:text-white transition">Contact</Link>
+            <Link href="/list-your-venue" className="hover:text-white transition">How It Works</Link>
+          </div>
         </div>
       </div>
     </footer>

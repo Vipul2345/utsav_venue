@@ -150,7 +150,103 @@ function BookingCheckoutContent() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // 3. Process Payment Confirmation
+  // Helper to load Razorpay checkout.js script
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if ((window as any).Razorpay) return resolve(true);
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Real Razorpay Standard Checkout Modal
+  const handleRazorpayPayment = async () => {
+    if (!createdBooking) return;
+    setIsProcessingPayment(true);
+    setError(null);
+
+    try {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Razorpay Checkout SDK failed to load. Please check your internet connection.');
+      }
+
+      const orderRes = await fetch('/api/payments/razorpay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: createdBooking.id }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) {
+        throw new Error(orderData.error || 'Failed to initialize payment gateway order');
+      }
+
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Utsav Venues',
+        description: `Booking #${orderData.bookingNumber} - ${hall.name}`,
+        order_id: orderData.orderId,
+        prefill: {
+          name: orderData.customerName,
+          email: orderData.customerEmail,
+          contact: orderData.customerPhone,
+        },
+        theme: {
+          color: '#b45309',
+        },
+        handler: async function (response: any) {
+          try {
+            const confirmRes = await fetch('/api/payments/confirm', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                bookingId: createdBooking.id,
+                amount: createdBooking.totalAmount,
+                paymentMethod: 'RAZORPAY',
+                providerTransactionId: response.razorpay_payment_id,
+                providerSignature: response.razorpay_signature,
+              }),
+            });
+
+            if (!confirmRes.ok) {
+              const cData = await confirmRes.json();
+              throw new Error(cData.error || 'Payment verification failed');
+            }
+
+            setPaymentSuccess(true);
+            setTimeout(() => {
+              router.push(`/bookings/${createdBooking.id}`);
+            }, 1500);
+          } catch (err: any) {
+            setError(err.message);
+          } finally {
+            setIsProcessingPayment(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsProcessingPayment(false);
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      setError(err.message);
+      setIsProcessingPayment(false);
+    }
+  };
+
+  // 3. Process Direct Mock Payment Confirmation
   const handleCompletePayment = async () => {
     if (!createdBooking) return;
     setIsProcessingPayment(true);
@@ -401,29 +497,41 @@ function BookingCheckoutContent() {
             </div>
 
             {/* Pay Now CTA */}
+            {/* Razorpay Standard Checkout CTA */}
             <button
               type="button"
               disabled={isProcessingPayment || paymentSuccess || holdSecondsRemaining === 0}
-              onClick={handleCompletePayment}
+              onClick={handleRazorpayPayment}
               className={`w-full py-3.5 px-4 rounded-xl font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 ${
                 !isProcessingPayment && !paymentSuccess && holdSecondsRemaining > 0
-                  ? 'bg-gradient-to-r from-brand-600 to-amber-600 hover:from-brand-700 hover:to-amber-700 text-white cursor-pointer'
+                  ? 'bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white cursor-pointer'
                   : 'bg-stone-300 text-stone-500 cursor-not-allowed'
               }`}
             >
               {isProcessingPayment ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Verifying Payment...</span>
+                  <span>Opening Gateway...</span>
                 </>
               ) : paymentSuccess ? (
                 <span>Confirmed!</span>
               ) : (
                 <>
-                  <Lock className="w-4 h-4" />
-                  <span>Confirm & Lock Venue Now</span>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Pay with Razorpay Gateway</span>
                 </>
               )}
+            </button>
+
+            {/* Direct Simulation Option */}
+            <button
+              type="button"
+              disabled={isProcessingPayment || paymentSuccess || holdSecondsRemaining === 0}
+              onClick={handleCompletePayment}
+              className="w-full py-2.5 px-4 rounded-xl font-bold text-[11px] border border-stone-200 hover:bg-stone-50 text-stone-700 transition flex items-center justify-center gap-1.5"
+            >
+              <Lock className="w-3.5 h-3.5 text-stone-400" />
+              <span>Simulate Instant Confirmation</span>
             </button>
 
             <div className="text-[10px] text-stone-400 text-center space-y-1">

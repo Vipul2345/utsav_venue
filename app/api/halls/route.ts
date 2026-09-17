@@ -15,6 +15,12 @@ export async function GET(request: Request) {
     const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : null;
     const minRating = searchParams.get('minRating') ? parseFloat(searchParams.get('minRating')!) : null;
     const amenities = searchParams.get('amenities')?.split(',').filter(Boolean);
+    const setting = searchParams.get('setting'); // indoor, outdoor, both
+    const hasParking = searchParams.get('hasParking') === 'true';
+    const alcoholAllowed = searchParams.get('alcoholAllowed') === 'true';
+    const outsideCateringAllowed = searchParams.get('outsideCateringAllowed') === 'true';
+    const outsideDecorAllowed = searchParams.get('outsideDecorAllowed') === 'true';
+    const minRooms = searchParams.get('minRooms') ? parseInt(searchParams.get('minRooms')!, 10) : null;
     const sortBy = searchParams.get('sortBy') || 'recommended';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '12', 10);
@@ -29,7 +35,7 @@ export async function GET(request: Request) {
       where.city = { slug: citySlug };
     }
 
-    if (localitySlug) {
+    if (localitySlug && localitySlug !== 'all') {
       where.locality = { slug: localitySlug };
     }
 
@@ -47,6 +53,33 @@ export async function GET(request: Request) {
     if (guests && !isNaN(guests) && guests > 0) {
       where.minCapacity = { lte: guests };
       where.maxCapacity = { gte: guests };
+    }
+
+    // Policy & Amenity filters
+    if (hasParking) {
+      where.hasParking = true;
+    }
+    if (alcoholAllowed) {
+      where.alcoholAllowed = true;
+    }
+    if (outsideCateringAllowed) {
+      where.outsideCateringAllowed = true;
+    }
+    if (outsideDecorAllowed) {
+      where.outsideDecorAllowed = true;
+    }
+    if (minRooms && minRooms > 0) {
+      where.roomsCount = { gte: minRooms };
+    }
+
+    // Indoor/Outdoor setting
+    if (setting === 'indoor') {
+      where.indoorAreaSqFt = { gt: 0 };
+    } else if (setting === 'outdoor') {
+      where.outdoorAreaSqFt = { gt: 0 };
+    } else if (setting === 'both') {
+      where.indoorAreaSqFt = { gt: 0 };
+      where.outdoorAreaSqFt = { gt: 0 };
     }
 
     // Amenities filtering

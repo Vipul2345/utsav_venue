@@ -17,6 +17,8 @@ import {
   ShieldCheck,
   Check,
   X,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import {
   isValidEmail,
@@ -35,6 +37,8 @@ function RegisterContent() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Manager specific fields
   const [businessName, setBusinessName] = useState('');
@@ -328,14 +332,24 @@ function RegisterContent() {
                 <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
                   Password *
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full px-3.5 py-2.5 pr-10 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-1"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
 
                 {/* Password Strength Checklist */}
                 {password.length > 0 && (
@@ -346,50 +360,68 @@ function RegisterContent() {
                         className={
                           passwordValidation.score <= 2
                             ? 'text-rose-600 font-bold'
-                            : passwordValidation.score === 3
+                            : passwordValidation.score <= 4
                             ? 'text-amber-600 font-bold'
                             : 'text-emerald-600 font-bold'
                         }
                       >
                         {passwordValidation.score <= 2
                           ? 'Weak'
-                          : passwordValidation.score === 3
+                          : passwordValidation.score <= 4
                           ? 'Moderate'
                           : 'Strong'}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-1 text-[10px] text-stone-500">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[10px] text-stone-600">
                       <div className="flex items-center gap-1">
                         {password.length >= 8 ? (
-                          <Check className="w-3 h-3 text-emerald-600" />
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                         ) : (
-                          <X className="w-3 h-3 text-rose-400" />
+                          <X className="w-3 h-3 text-rose-400 shrink-0" />
                         )}
-                        <span>8+ Characters</span>
+                        <span className={password.length >= 8 ? 'text-emerald-700 font-semibold' : ''}>8+ Characters</span>
                       </div>
                       <div className="flex items-center gap-1">
                         {/[A-Z]/.test(password) ? (
-                          <Check className="w-3 h-3 text-emerald-600" />
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                         ) : (
-                          <X className="w-3 h-3 text-rose-400" />
+                          <X className="w-3 h-3 text-rose-400 shrink-0" />
                         )}
-                        <span>Uppercase (A-Z)</span>
+                        <span className={/[A-Z]/.test(password) ? 'text-emerald-700 font-semibold' : ''}>Uppercase (A-Z)</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {/[a-z]/.test(password) ? (
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                        ) : (
+                          <X className="w-3 h-3 text-rose-400 shrink-0" />
+                        )}
+                        <span className={/[a-z]/.test(password) ? 'text-emerald-700 font-semibold' : ''}>Lowercase (a-z)</span>
                       </div>
                       <div className="flex items-center gap-1">
                         {/[0-9]/.test(password) ? (
-                          <Check className="w-3 h-3 text-emerald-600" />
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                         ) : (
-                          <X className="w-3 h-3 text-rose-400" />
+                          <X className="w-3 h-3 text-rose-400 shrink-0" />
                         )}
-                        <span>Number (0-9)</span>
+                        <span className={/[0-9]/.test(password) ? 'text-emerald-700 font-semibold' : ''}>Number (0-9)</span>
                       </div>
                       <div className="flex items-center gap-1">
                         {/[^A-Za-z0-9]/.test(password) ? (
-                          <Check className="w-3 h-3 text-emerald-600" />
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                         ) : (
-                          <X className="w-3 h-3 text-rose-400" />
+                          <X className="w-3 h-3 text-rose-400 shrink-0" />
                         )}
-                        <span>Special Char (!@#)</span>
+                        <span className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-700 font-semibold' : ''}>Symbol (!@#$)</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {confirmPassword && confirmPassword === password ? (
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                        ) : (
+                          <X className="w-3 h-3 text-stone-300 shrink-0" />
+                        )}
+                        <span className={confirmPassword && confirmPassword === password ? 'text-emerald-700 font-semibold' : ''}>
+                          Passwords Match
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -400,21 +432,39 @@ function RegisterContent() {
                 <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
                   Confirm Password *
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className={`w-full px-3.5 py-2.5 bg-stone-50 border rounded-xl text-sm focus:outline-none focus:ring-2 ${
-                    confirmPassword && confirmPassword !== password
-                      ? 'border-rose-300 focus:ring-rose-500'
-                      : 'border-stone-200 focus:ring-amber-500'
-                  }`}
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className={`w-full px-3.5 py-2.5 pr-10 bg-stone-50 border rounded-xl text-sm focus:outline-none focus:ring-2 ${
+                      confirmPassword && confirmPassword !== password
+                        ? 'border-rose-300 focus:ring-rose-500'
+                        : confirmPassword && confirmPassword === password
+                        ? 'border-emerald-400 focus:ring-emerald-500'
+                        : 'border-stone-200 focus:ring-amber-500'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-1"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 {confirmPassword && confirmPassword !== password && (
                   <p className="mt-1 text-[11px] text-rose-600 font-medium">
                     Passwords do not match.
+                  </p>
+                )}
+                {confirmPassword && confirmPassword === password && (
+                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Passwords match!</span>
                   </p>
                 )}
               </div>

@@ -28,12 +28,19 @@ function SearchContent() {
 
   // State initialized from URL params
   const [city, setCity] = useState(searchParams.get('city') || 'bangalore');
+  const [locality, setLocality] = useState(searchParams.get('locality') || '');
   const [occasion, setOccasion] = useState(searchParams.get('occasion') || 'wedding');
   const [date, setDate] = useState(searchParams.get('date') || '');
   const [guests, setGuests] = useState(searchParams.get('guests') || '300');
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
   const [minRating, setMinRating] = useState(searchParams.get('minRating') || '');
+  const [setting, setSetting] = useState(searchParams.get('setting') || '');
+  const [hasParking, setHasParking] = useState(searchParams.get('hasParking') === 'true');
+  const [alcoholAllowed, setAlcoholAllowed] = useState(searchParams.get('alcoholAllowed') === 'true');
+  const [outsideCateringAllowed, setOutsideCateringAllowed] = useState(searchParams.get('outsideCateringAllowed') === 'true');
+  const [outsideDecorAllowed, setOutsideDecorAllowed] = useState(searchParams.get('outsideDecorAllowed') === 'true');
+  const [minRooms, setMinRooms] = useState(searchParams.get('minRooms') || '');
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'recommended');
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
@@ -74,12 +81,19 @@ function SearchContent() {
     try {
       const params = new URLSearchParams();
       if (city) params.set('city', city);
+      if (locality) params.set('locality', locality);
       if (occasion) params.set('occasion', occasion);
       if (date) params.set('date', date);
       if (guests) params.set('guests', guests);
       if (minPrice) params.set('minPrice', minPrice);
       if (maxPrice) params.set('maxPrice', maxPrice);
       if (minRating) params.set('minRating', minRating);
+      if (setting) params.set('setting', setting);
+      if (hasParking) params.set('hasParking', 'true');
+      if (alcoholAllowed) params.set('alcoholAllowed', 'true');
+      if (outsideCateringAllowed) params.set('outsideCateringAllowed', 'true');
+      if (outsideDecorAllowed) params.set('outsideDecorAllowed', 'true');
+      if (minRooms) params.set('minRooms', minRooms);
       if (sortBy) params.set('sortBy', sortBy);
       if (selectedAmenities.length > 0) params.set('amenities', selectedAmenities.join(','));
 
@@ -98,7 +112,23 @@ function SearchContent() {
 
   useEffect(() => {
     executeSearch();
-  }, [city, occasion, guests, minPrice, maxPrice, minRating, sortBy, selectedAmenities]);
+  }, [
+    city,
+    locality,
+    occasion,
+    guests,
+    minPrice,
+    maxPrice,
+    minRating,
+    setting,
+    hasParking,
+    alcoholAllowed,
+    outsideCateringAllowed,
+    outsideDecorAllowed,
+    minRooms,
+    sortBy,
+    selectedAmenities,
+  ]);
 
   const toggleAmenity = (id: string) => {
     setSelectedAmenities((prev) =>
@@ -119,7 +149,34 @@ function SearchContent() {
   };
 
   const activeFilterCount =
-    (minPrice ? 1 : 0) + (maxPrice ? 1 : 0) + (minRating ? 1 : 0) + selectedAmenities.length;
+    (minPrice ? 1 : 0) +
+    (maxPrice ? 1 : 0) +
+    (minRating ? 1 : 0) +
+    (locality ? 1 : 0) +
+    (setting ? 1 : 0) +
+    (hasParking ? 1 : 0) +
+    (alcoholAllowed ? 1 : 0) +
+    (outsideCateringAllowed ? 1 : 0) +
+    (outsideDecorAllowed ? 1 : 0) +
+    (minRooms ? 1 : 0) +
+    selectedAmenities.length;
+
+  const currentCityLocalities =
+    meta.cities.find((c) => c.slug === city)?.localities || [];
+
+  const resetAllFilters = () => {
+    setMinPrice('');
+    setMaxPrice('');
+    setMinRating('');
+    setLocality('');
+    setSetting('');
+    setHasParking(false);
+    setAlcoholAllowed(false);
+    setOutsideCateringAllowed(false);
+    setOutsideDecorAllowed(false);
+    setMinRooms('');
+    setSelectedAmenities([]);
+  };
 
   const renderFiltersContent = (isMobileModal = false) => (
     <div className="space-y-6">
@@ -130,16 +187,65 @@ function SearchContent() {
         </h3>
         <button
           type="button"
-          onClick={() => {
-            setMinPrice('');
-            setMaxPrice('');
-            setMinRating('');
-            setSelectedAmenities([]);
-          }}
+          onClick={resetAllFilters}
           className="text-xs text-amber-800 hover:text-amber-900 hover:underline font-bold"
         >
           Reset All
         </button>
+      </div>
+
+      {/* Locality Filter (if city selected and has localities) */}
+      {currentCityLocalities.length > 0 && (
+        <div>
+          <label
+            htmlFor={isMobileModal ? 'mobile-locality-filter' : 'search-locality-filter'}
+            className="block text-xs font-bold text-stone-800 mb-2"
+          >
+            Locality / Area
+          </label>
+          <select
+            id={isMobileModal ? 'mobile-locality-filter' : 'search-locality-filter'}
+            value={locality}
+            onChange={(e) => setLocality(e.target.value)}
+            className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+          >
+            <option value="">All Localities in {meta.cities.find((c) => c.slug === city)?.name || 'City'}</option>
+            {currentCityLocalities.map((loc: any) => (
+              <option key={loc.id} value={loc.slug}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Setting (Indoor / Outdoor) */}
+      <div>
+        <span className="block text-xs font-bold text-stone-800 mb-2">Venue Setting</span>
+        <div className="grid grid-cols-4 gap-1.5">
+          {[
+            { id: '', label: 'All' },
+            { id: 'indoor', label: 'Indoor' },
+            { id: 'outdoor', label: 'Outdoor' },
+            { id: 'both', label: 'Both' },
+          ].map((s) => {
+            const isSelected = setting === s.id;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSetting(s.id)}
+                className={`py-2 text-xs font-bold rounded-xl border transition ${
+                  isSelected
+                    ? 'bg-amber-800 text-white border-amber-800 shadow-sm'
+                    : 'bg-stone-50 text-stone-800 border-stone-200 hover:bg-stone-100'
+                }`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Price Range */}
@@ -207,6 +313,81 @@ function SearchContent() {
         </div>
       </div>
 
+      {/* Guest Rooms */}
+      <div>
+        <span className="block text-xs font-bold text-stone-800 mb-2">Guest / Bridal Rooms</span>
+        <div className="grid grid-cols-4 gap-1.5">
+          {[
+            { value: '', label: 'Any' },
+            { value: '2', label: '2+' },
+            { value: '5', label: '5+' },
+            { value: '10', label: '10+' },
+          ].map((room) => {
+            const isSelected = minRooms === room.value;
+            return (
+              <button
+                key={room.value}
+                type="button"
+                onClick={() => setMinRooms(room.value)}
+                className={`py-2 text-xs font-bold rounded-xl border transition ${
+                  isSelected
+                    ? 'bg-amber-800 text-white border-amber-800 shadow-sm'
+                    : 'bg-stone-50 text-stone-800 border-stone-200 hover:bg-stone-100'
+                }`}
+              >
+                {room.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Policies & Venue Rules */}
+      <div>
+        <span className="block text-xs font-bold text-stone-800 mb-2">Policies & Catering</span>
+        <div className="space-y-1 text-xs">
+          <label className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 cursor-pointer text-stone-700 min-h-[40px] transition select-none">
+            <input
+              type="checkbox"
+              checked={hasParking}
+              onChange={(e) => setHasParking(e.target.checked)}
+              className="rounded text-amber-700 focus:ring-amber-500 w-4 h-4 border-stone-300"
+            />
+            <span className="font-medium text-stone-800">Parking Space on Premises</span>
+          </label>
+
+          <label className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 cursor-pointer text-stone-700 min-h-[40px] transition select-none">
+            <input
+              type="checkbox"
+              checked={outsideCateringAllowed}
+              onChange={(e) => setOutsideCateringAllowed(e.target.checked)}
+              className="rounded text-amber-700 focus:ring-amber-500 w-4 h-4 border-stone-300"
+            />
+            <span className="font-medium text-stone-800">Outside Catering Allowed</span>
+          </label>
+
+          <label className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 cursor-pointer text-stone-700 min-h-[40px] transition select-none">
+            <input
+              type="checkbox"
+              checked={outsideDecorAllowed}
+              onChange={(e) => setOutsideDecorAllowed(e.target.checked)}
+              className="rounded text-amber-700 focus:ring-amber-500 w-4 h-4 border-stone-300"
+            />
+            <span className="font-medium text-stone-800">Outside Decor Allowed</span>
+          </label>
+
+          <label className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 cursor-pointer text-stone-700 min-h-[40px] transition select-none">
+            <input
+              type="checkbox"
+              checked={alcoholAllowed}
+              onChange={(e) => setAlcoholAllowed(e.target.checked)}
+              className="rounded text-amber-700 focus:ring-amber-500 w-4 h-4 border-stone-300"
+            />
+            <span className="font-medium text-stone-800">Alcohol Permitted</span>
+          </label>
+        </div>
+      </div>
+
       {/* Amenities */}
       {meta.amenities.length > 0 && (
         <div>
@@ -240,12 +421,7 @@ function SearchContent() {
         <div className="pt-3 border-t border-stone-100 flex gap-2">
           <button
             type="button"
-            onClick={() => {
-              setMinPrice('');
-              setMaxPrice('');
-              setMinRating('');
-              setSelectedAmenities([]);
-            }}
+            onClick={resetAllFilters}
             className="w-1/3 py-3 rounded-xl border border-stone-200 text-stone-700 font-bold text-xs hover:bg-stone-50"
           >
             Reset

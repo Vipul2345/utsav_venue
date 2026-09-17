@@ -14,7 +14,9 @@ import {
   ArrowRight,
   ArrowLeft,
   ShieldAlert,
+  UploadCloud,
 } from 'lucide-react';
+import { UploadDropzone } from '@/lib/uploadthing';
 
 export default function NewHallWizardPage() {
   const router = useRouter();
@@ -574,6 +576,28 @@ export default function NewHallWizardPage() {
                   </button>
                 )}
               </div>
+
+              {/* Direct Drag & Drop Cloud Uploader */}
+              {mediaUrls.length < maxAllowedImages && (
+                <div className="p-4 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-2xl space-y-2">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                    <UploadCloud className="w-4 h-4 text-amber-700" />
+                    <span>Upload Venue Photos (Direct Drag & Drop)</span>
+                  </div>
+                  <UploadDropzone
+                    endpoint="venueImageUploader"
+                    onClientUploadComplete={(res) => {
+                      if (res && res.length > 0) {
+                        const newUrls = res.map((f) => f.url);
+                        setMediaUrls((prev) => [...prev.filter((u) => u.trim() !== ''), ...newUrls].slice(0, maxAllowedImages));
+                      }
+                    }}
+                    onUploadError={(err: Error) => {
+                      setError(`Upload error: ${err.message}`);
+                    }}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2.5">
                 {mediaUrls.map((url, idx) => (

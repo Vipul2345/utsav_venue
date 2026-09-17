@@ -4,6 +4,7 @@ import { calculateHallPrice } from './pricingService';
 import { createAuditLog } from './auditService';
 import { createNotification } from './notificationService';
 import { CateringType } from '../types';
+import { sendBookingConfirmationEmail } from '../email';
 
 export interface CreateBookingInput {
   hallId: string;
@@ -60,6 +61,9 @@ export async function createBookingWithLock(input: CreateBookingInput) {
   }
 
   return prisma.$transaction(async (tx) => {
+    // 0. Acquire pessimistic row-level write lock on the venue row to strictly serialize concurrent booking attempts at DB level
+    await tx.$executeRaw`SELECT id FROM "Hall" WHERE id = ${hallId} FOR UPDATE;`;
+
     // 1. Fetch Hall & verify status and capacity
     const hall = await tx.hall.findUnique({
       where: { id: hallId },
@@ -389,6 +393,22 @@ export async function confirmBookingPayment(params: {
         }),
       },
     });
+
+    // Send confirmation email asynchronously via Resend
+    if (booking.customer?.email) {
+      sendBookingConfirmationEmail({
+        to: booking.customer.email,
+        customerName: booking.customer.fullName,
+        bookingNumber: booking.bookingNumber,
+        hallName: booking.hall.name,
+        eventDate: booking.eventDate,
+        timeSlot: `${booking.startTime} - ${booking.endTime}`,
+        guestCount: booking.guestCount,
+        totalAmount: Number(booking.totalAmount),
+      }).catch((err) => {
+        console.error('[BOOKING] Error sending confirmation email:', err);
+      });
+    }
 
     return updated;
   });

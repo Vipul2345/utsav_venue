@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   MapPin,
   Star,
@@ -25,6 +26,15 @@ import {
   Info,
   Check,
 } from 'lucide-react';
+
+const VenueMap = dynamic(() => import('@/components/VenueMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 sm:h-80 rounded-2xl bg-stone-100 flex items-center justify-center text-xs text-stone-500 animate-pulse">
+      Loading interactive venue map...
+    </div>
+  ),
+});
 
 export default function HallDetailsPage() {
   const params = useParams();
@@ -388,6 +398,49 @@ export default function HallDetailsPage() {
                     ? 'Alcohol permitted with valid one-day event permit.'
                     : 'Strictly non-alcoholic venue.'}
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Venue Map */}
+          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-stone-900">Venue Location & Neighborhood</h2>
+                <p className="text-xs text-stone-500">{hall.address}, {hall.city?.name}</p>
+              </div>
+              <MapPin className="w-5 h-5 text-amber-700 shrink-0" />
+            </div>
+            <VenueMap
+              latitude={hall.latitude}
+              longitude={hall.longitude}
+              venueName={hall.name}
+              address={hall.address}
+              city={hall.city?.name}
+            />
+          </div>
+
+          {/* No Surprise Charges Guarantee Card */}
+          <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-6 space-y-3">
+            <div className="flex items-center gap-2 text-amber-900 font-extrabold text-sm">
+              <ShieldCheck className="w-5 h-5 text-amber-700" />
+              <span>No Surprise Charges Guarantee</span>
+            </div>
+            <p className="text-xs text-amber-950 leading-relaxed">
+              At Utsav Venues, all quoted rates include full transparency. Your final total incorporates base rental, weekend prime surcharges (if applicable), guest catering allowances, requested add-ons, and statutory 18% GST. No unexpected on-the-day electrical surcharges or hidden gate fees.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] font-bold text-amber-900">
+              <div className="bg-white/80 p-2 rounded-lg border border-amber-200/60 text-center">
+                <span>✓ 100% Itemized</span>
+              </div>
+              <div className="bg-white/80 p-2 rounded-lg border border-amber-200/60 text-center">
+                <span>✓ Concurrency Locked</span>
+              </div>
+              <div className="bg-white/80 p-2 rounded-lg border border-amber-200/60 text-center">
+                <span>✓ GST Tax Invoiced</span>
+              </div>
+              <div className="bg-white/80 p-2 rounded-lg border border-amber-200/60 text-center">
+                <span>✓ Free Cancellation</span>
               </div>
             </div>
           </div>

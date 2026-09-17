@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Building2, Save, ArrowLeft, AlertCircle, CheckCircle2, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
+import { Building2, Save, ArrowLeft, AlertCircle, CheckCircle2, Image as ImageIcon, Plus, Trash2, UploadCloud } from 'lucide-react';
+import { UploadDropzone } from '@/lib/uploadthing';
 
 export default function ManagerEditHallPage() {
   const params = useParams();
@@ -394,10 +395,36 @@ export default function ManagerEditHallPage() {
                 className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl font-bold text-xs transition flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Photo</span>
+                <span>Add Photo URL</span>
               </button>
             )}
           </div>
+
+          {/* Direct Drag & Drop Cloud Uploader */}
+          {mediaList.length < maxAllowedImages && (
+            <div className="p-4 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                <UploadCloud className="w-4 h-4 text-amber-700" />
+                <span>Upload Photos Directly (Cloud Storage)</span>
+              </div>
+              <UploadDropzone
+                endpoint="venueImageUploader"
+                onClientUploadComplete={(res) => {
+                  if (res && res.length > 0) {
+                    const newItems = res.map((f) => ({
+                      url: f.url,
+                      isCover: mediaList.length === 0,
+                      verificationStatus: 'PENDING',
+                    }));
+                    setMediaList((prev) => [...prev.filter((m) => m.url.trim() !== ''), ...newItems].slice(0, maxAllowedImages));
+                  }
+                }}
+                onUploadError={(err: Error) => {
+                  setError(`Upload error: ${err.message}`);
+                }}
+              />
+            </div>
+          )}
 
           <div className="space-y-3">
             {mediaList.map((m, idx) => (

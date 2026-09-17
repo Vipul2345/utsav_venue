@@ -14,15 +14,21 @@
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
+    "@types/leaflet": "^1.9.22",
+    "@uploadthing/react": "^7.3.3",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
     "next": "^15.1.0",
+    "razorpay": "^2.9.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.5.5"
+    "resend": "^6.28.1",
+    "tailwind-merge": "^2.5.5",
+    "uploadthing": "^7.7.4"
   },
   "devDependencies": {
     "@isomorphic-git/lightning-fs": "^4.8.0",

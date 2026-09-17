@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import prisma from '../prisma';
+import { sendOtpEmail } from '../email';
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_VERIFICATION_ATTEMPTS = 5;
@@ -86,8 +87,11 @@ export async function generateAndSendOtp(
     },
   });
 
-  // 5. In production, send via email provider (e.g. Resend / SendGrid / SMTP).
-  // For local and demo deployment, log to console and return devOtpCode so verification works reliably.
+  // 5. In production/configured environment, send real email via Resend
+  sendOtpEmail(normalizedEmail, otpCode).catch((err) => {
+    console.error('[AUTH-OTP] Failed to send via Resend:', err);
+  });
+
   console.log(`[AUTH-OTP] OTP for ${normalizedEmail} (${purpose}): [${otpCode}] (Expires in ${OTP_EXPIRY_MINUTES}m)`);
 
   return {
