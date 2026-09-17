@@ -94,15 +94,18 @@ export default function DemoAccountSwitcher({ currentUser }: { currentUser: any 
     <div className="relative" ref={switcherRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-full shadow-sm transition"
+        aria-label="Quick Demo Login"
+        aria-expanded={isOpen}
+        className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-full shadow-sm transition min-h-[36px]"
         title="Quickly test any role with one click"
       >
-        <KeyRound className="w-3.5 h-3.5 text-amber-700" />
-        <span>Quick Demo Login</span>
+        <KeyRound className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+        <span className="hidden sm:inline">Demo</span>
+        <span className="hidden md:inline"> Login</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-80 bg-white border border-gray-200 rounded-2xl shadow-2xl p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
             <div>
               <p className="text-xs font-bold text-gray-900">Instant Role Switcher</p>
@@ -111,14 +114,14 @@ export default function DemoAccountSwitcher({ currentUser }: { currentUser: any 
             {currentUser && (
               <button
                 onClick={handleLogout}
-                className="text-[10px] font-medium text-rose-600 hover:text-rose-800"
+                className="text-[10px] font-medium text-rose-600 hover:text-rose-800 p-1"
               >
                 Sign out
               </button>
             )}
           </div>
 
-          <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-[60vh] sm:max-h-96 overflow-y-auto pr-1">
             {DEMO_USERS.map((u) => {
               const Icon = u.icon;
               const isCurrent = currentUser?.email === u.email;
@@ -127,30 +130,30 @@ export default function DemoAccountSwitcher({ currentUser }: { currentUser: any 
               return (
                 <button
                   key={u.email}
-                  disabled={isLoading || isCurrent}
+                  disabled={!!loading || isCurrent}
                   onClick={() => switchAccount(u.email, u.redirect)}
-                  className={`w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition ${
+                  className={`w-full text-left p-2 rounded-xl transition flex items-center justify-between gap-2 min-h-[44px] ${
                     isCurrent
-                      ? 'bg-amber-50 border border-amber-300'
-                      : 'hover:bg-gray-50 border border-transparent'
+                      ? 'bg-amber-50/70 border border-amber-300'
+                      : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
                   }`}
                 >
-                  <div className={`p-1.5 rounded-md text-white ${u.color} shrink-0 mt-0.5`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-gray-900 truncate">{u.role}</p>
-                      {isCurrent && (
-                        <span className="text-[9px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full font-bold">
-                          Active
-                        </span>
-                      )}
-                      {isLoading && <RefreshCw className="w-3 h-3 animate-spin text-gray-400" />}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-7 h-7 rounded-lg ${u.color} text-white flex items-center justify-center shrink-0 shadow-sm`}>
+                      <Icon className="w-3.5 h-3.5" />
                     </div>
-                    <p className="text-[10px] text-gray-500 truncate">{u.desc}</p>
-                    <p className="text-[9px] text-gray-400 font-mono truncate">{u.email}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-900 truncate">{u.role}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{u.desc}</p>
+                    </div>
                   </div>
+                  {isCurrent ? (
+                    <span className="text-[9px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full font-bold shrink-0">
+                      Active
+                    </span>
+                  ) : isLoading ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400 shrink-0" />
+                  ) : null}
                 </button>
               );
             })}

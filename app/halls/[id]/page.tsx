@@ -766,7 +766,7 @@ export default function HallDetailsPage() {
       </div>
 
       {/* Mobile Floating Sticky Booking CTA Bar (Visible on lg:hidden) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-2xl flex items-center justify-between gap-3">
         <div>
           <span className="text-[10px] text-stone-600 uppercase font-bold block">Estimated Price</span>
           <div className="flex items-baseline gap-1">

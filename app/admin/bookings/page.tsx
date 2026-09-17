@@ -62,7 +62,7 @@ export default function AdminBookingsPage() {
       ) : (
         <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[720px]">
               <thead className="bg-stone-50 text-stone-500 border-b border-stone-200 font-bold uppercase text-[10px]">
                 <tr>
                   <th className="p-4">Reference</th>

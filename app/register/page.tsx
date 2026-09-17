@@ -29,7 +29,8 @@ import {
 function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const defaultRole = searchParams.get('role') === 'MANAGER' ? 'MANAGER' : 'CUSTOMER';
+  const roleParam = searchParams.get('role');
+  const defaultRole = roleParam === 'MANAGER' || roleParam === 'HALL_MANAGER' ? 'MANAGER' : 'CUSTOMER';
 
   const [role, setRole] = useState<'CUSTOMER' | 'MANAGER'>(defaultRole);
   const [fullName, setFullName] = useState('');

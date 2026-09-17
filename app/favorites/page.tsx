@@ -78,8 +78,9 @@ export default function FavoritesPage() {
                   />
                   <button
                     onClick={() => removeFavorite(hall.id)}
-                    className="absolute top-3 right-3 p-1.5 rounded-full bg-white/80 hover:bg-white text-rose-600 shadow"
+                    className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white text-rose-600 shadow min-w-[36px] min-h-[36px] flex items-center justify-center transition"
                     title="Remove from favorites"
+                    aria-label="Remove from favorites"
                   >
                     <Heart className="w-4 h-4 fill-rose-600" />
                   </button>
@@ -104,7 +105,7 @@ export default function FavoritesPage() {
 
                     <Link
                       href={`/halls/${hall.slug || hall.id}`}
-                      className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs rounded-xl transition flex items-center gap-1"
+                      className="px-3.5 py-2 min-h-[40px] bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs rounded-xl transition flex items-center gap-1"
                     >
                       <span>View</span>
                       <ChevronRight className="w-3.5 h-3.5" />

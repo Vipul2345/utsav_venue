@@ -203,10 +203,10 @@ export default function HomePage() {
               </div>
 
               {/* Submit Button */}
-              <div className="flex items-end">
+              <div className="flex items-end sm:col-span-2 lg:col-span-1">
                 <button
                   type="submit"
-                  className="w-full py-3 px-4 bg-gradient-to-r from-brand-600 to-amber-600 hover:from-brand-700 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-brand-600 to-amber-600 hover:from-brand-700 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 min-h-[44px]"
                 >
                   <Search className="w-4 h-4" />
                   <span>Search Halls</span>
@@ -358,15 +358,17 @@ export default function HomePage() {
             <Link
               key={occ.slug}
               href={`/search?occasion=${occ.slug}`}
-              className="p-4 bg-white border border-stone-200 rounded-2xl hover:border-amber-400 hover:shadow-lg transition group text-center space-y-2"
+              className="p-3 sm:p-4 bg-white border border-stone-200 rounded-2xl hover:border-amber-400 hover:shadow-lg transition group text-center flex flex-col justify-between h-full space-y-2 min-h-[140px]"
             >
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-50 group-hover:bg-amber-100 flex items-center justify-center text-2xl transition">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 mx-auto rounded-2xl bg-amber-50 group-hover:bg-amber-100 flex items-center justify-center text-xl sm:text-2xl transition shrink-0">
                 {occ.icon}
               </div>
-              <h4 className="font-bold text-xs text-stone-900 group-hover:text-amber-800 transition">
-                {occ.name}
-              </h4>
-              <p className="text-[10px] text-stone-500">{occ.desc}</p>
+              <div>
+                <h4 className="font-bold text-xs text-stone-900 group-hover:text-amber-800 transition">
+                  {occ.name}
+                </h4>
+                <p className="text-[10px] text-stone-500 line-clamp-2 mt-0.5">{occ.desc}</p>
+              </div>
             </Link>
           ))}
         </div>

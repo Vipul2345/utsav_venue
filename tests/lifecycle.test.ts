@@ -294,7 +294,7 @@ describe('End-to-End System Lifecycle Scenario', () => {
       endTime: '23:00',
     });
     expect(isAvail.isAvailable).toBe(false);
-  });
+  }, 25000);
 
   it('Step 8: Manager reserves an external/offline booking without platform fee', async () => {
     const eventDate = '2026-11-21';

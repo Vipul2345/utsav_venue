@@ -219,7 +219,43 @@ export default function NewHallWizardPage() {
       </div>
 
       {/* Stepper Header */}
-      <div className="grid grid-cols-5 gap-2 text-center text-[10px] font-bold">
+      {/* Mobile compact stepper (< md) */}
+      <div className="md:hidden bg-white p-3.5 rounded-2xl border border-stone-200 shadow-sm space-y-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+            Step {currentStep} of 5
+          </span>
+          <span className="text-xs font-semibold text-stone-800">
+            {[
+              { num: 1, label: 'Basic Info' },
+              { num: 2, label: 'Capacity' },
+              { num: 3, label: 'Pricing' },
+              { num: 4, label: 'Occasions' },
+              { num: 5, label: 'Media & Rules' },
+            ].find((s) => s.num === currentStep)?.label}
+          </span>
+        </div>
+        <div className="grid grid-cols-5 gap-1.5">
+          {[1, 2, 3, 4, 5].map((stepNum) => (
+            <button
+              key={stepNum}
+              type="button"
+              onClick={() => setCurrentStep(stepNum)}
+              aria-label={`Go to step ${stepNum}`}
+              className={`h-2.5 rounded-full transition-all ${
+                currentStep === stepNum
+                  ? 'bg-amber-600 ring-2 ring-amber-300'
+                  : currentStep > stepNum
+                  ? 'bg-emerald-500'
+                  : 'bg-stone-200'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop 5-column stepper (>= md) */}
+      <div className="hidden md:grid md:grid-cols-5 gap-2 text-center text-xs font-bold">
         {[
           { num: 1, label: 'Basic Info' },
           { num: 2, label: 'Capacity' },
@@ -231,12 +267,12 @@ export default function NewHallWizardPage() {
             key={s.num}
             type="button"
             onClick={() => setCurrentStep(s.num)}
-            className={`p-2 rounded-xl border transition ${
+            className={`p-2.5 rounded-xl border transition min-h-[44px] flex items-center justify-center ${
               currentStep === s.num
                 ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
                 : currentStep > s.num
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-white text-stone-400 border-stone-200'
+                : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'
             }`}
           >
             Step {s.num}: {s.label}
@@ -688,12 +724,12 @@ export default function NewHallWizardPage() {
         )}
 
         {/* Wizard Navigation Footer */}
-        <div className="pt-6 border-t border-stone-100 flex items-center justify-between">
+        <div className="pt-6 border-t border-stone-100 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
           {currentStep > 1 ? (
             <button
               type="button"
               onClick={() => setCurrentStep((prev) => prev - 1)}
-              className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs rounded-xl transition flex items-center gap-1.5"
+              className="px-4 py-2.5 min-h-[44px] bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs rounded-xl transition flex items-center gap-1.5"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
@@ -706,7 +742,7 @@ export default function NewHallWizardPage() {
             <button
               type="button"
               onClick={() => setCurrentStep((prev) => prev + 1)}
-              className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
+              className="px-6 py-2.5 min-h-[44px] bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 ml-auto"
             >
               <span>Continue</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -716,7 +752,7 @@ export default function NewHallWizardPage() {
               type="button"
               disabled={loading}
               onClick={handleSubmit}
-              className="px-6 py-2.5 bg-gradient-to-r from-brand-600 to-amber-600 hover:from-brand-700 hover:to-amber-700 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-1.5"
+              className="px-6 py-2.5 min-h-[44px] bg-gradient-to-r from-brand-600 to-amber-600 hover:from-brand-700 hover:to-amber-700 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 ml-auto w-full sm:w-auto"
             >
               <span>{loading ? 'Submitting to Review Queue...' : 'Submit Venue for Admin Approval'}</span>
               <CheckCircle className="w-4 h-4" />

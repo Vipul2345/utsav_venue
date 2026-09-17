@@ -77,13 +77,13 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition">
-                <Sparkles className="w-5 h-5" />
+          <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+            <Link href="/" className="flex items-center gap-2 group min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition shrink-0">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-amber-800 to-amber-600 bg-clip-text text-transparent">
+              <div className="min-w-0">
+                <span className="text-base sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-amber-800 to-amber-600 bg-clip-text text-transparent truncate block">
                   UTSAV VENUES
                 </span>
                 <span className="hidden sm:block text-[10px] font-semibold tracking-widest text-amber-700/80 uppercase">
@@ -293,7 +293,7 @@ export default function Navbar() {
           </div>
 
           {/* Right Action Bar */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Quick Demo Role Switcher */}
             <DemoAccountSwitcher currentUser={user} />
 
@@ -301,8 +301,9 @@ export default function Navbar() {
             {(!user || isCustomer) && (
               <Link
                 href="/favorites"
-                className="p-2 text-gray-600 hover:text-rose-600 hover:bg-rose-50 rounded-full transition"
+                className="p-2 text-gray-600 hover:text-rose-600 hover:bg-rose-50 rounded-full transition min-w-[36px] min-h-[36px] flex items-center justify-center"
                 title="Saved Venues"
+                aria-label="Saved Venues"
               >
                 <Heart className="w-5 h-5" />
               </Link>
@@ -316,14 +317,16 @@ export default function Navbar() {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-gray-200 hover:border-amber-400 bg-gray-50 hover:bg-white transition text-xs font-semibold text-gray-800"
+                  aria-label="User account menu"
+                  aria-expanded={userMenuOpen}
+                  className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 pr-2 sm:pr-3 py-1 rounded-full border border-gray-200 hover:border-amber-400 bg-gray-50 hover:bg-white transition text-xs font-semibold text-gray-800 min-h-[36px]"
                 >
-                  <div className="w-7 h-7 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
                     {user.fullName?.[0]?.toUpperCase() || 'U'}
                   </div>
-                  <span className="hidden sm:inline max-w-[100px] truncate">{user.fullName}</span>
+                  <span className="hidden sm:inline max-w-[90px] truncate">{user.fullName}</span>
                   <span
-                    className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${
+                    className={`text-[9px] px-1 sm:px-1.5 py-0.5 rounded uppercase font-bold ${
                       isAdmin
                         ? 'bg-purple-100 text-purple-800'
                         : isManager
@@ -338,7 +341,7 @@ export default function Navbar() {
                 {userMenuOpen && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-xs"
+                    className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-56 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-xs"
                   >
                     <div className="px-4 py-2 border-b border-gray-100">
                       <p className="font-bold text-gray-900 truncate">{user.fullName}</p>

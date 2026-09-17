@@ -18,6 +18,8 @@ import {
   Lock,
   ArrowLeft,
   ChevronRight,
+  Menu,
+  X,
 } from 'lucide-react';
 
 const ALL_ADMIN_NAV = [
@@ -39,6 +41,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [adminUser, setAdminUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when pathname changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     async function load() {
@@ -77,55 +85,68 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-stone-100/60 flex flex-col md:flex-row">
       {/* Admin Sidebar */}
-      <aside className="w-full md:w-64 bg-stone-900 text-stone-300 shrink-0 border-r border-stone-800 p-4 space-y-6">
-        <div className="flex items-center gap-2.5 px-2 py-2 border-b border-stone-800 pb-4">
-          <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white font-bold shadow">
-            <Shield className="w-5 h-5" />
+      <aside className="w-full md:w-64 bg-stone-900 text-stone-300 shrink-0 border-b md:border-b-0 md:border-r border-stone-800 p-4 md:space-y-6">
+        <div className="flex items-center justify-between md:justify-start gap-2.5 px-2 py-1 md:py-2 md:border-b md:border-stone-800 md:pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white font-bold shadow">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xs font-black text-white uppercase tracking-wider">Marketplace Admin</h2>
+              <p className="text-[10px] text-purple-400 font-bold">{role.replace('_', ' ')}</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xs font-black text-white uppercase tracking-wider">Marketplace Admin</h2>
-            <p className="text-[10px] text-purple-400 font-bold">{role.replace('_', ' ')}</p>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 transition min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
 
-        {/* Navigation items */}
-        <nav className="space-y-1 text-xs font-semibold">
-          {accessibleNav.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
+        {/* Navigation items - collapsible on mobile, always visible on md+ */}
+        <div className={`${mobileMenuOpen ? 'block' : 'hidden'} md:block space-y-6 pt-3 md:pt-0`}>
+          <nav className="space-y-1 text-xs font-semibold">
+            {accessibleNav.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition ${
-                  isActive
-                    ? 'bg-purple-600 text-white font-bold shadow'
-                    : 'text-stone-400 hover:text-white hover:bg-stone-800'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 min-h-[44px] rounded-xl transition ${
+                    isActive
+                      ? 'bg-purple-600 text-white font-bold shadow'
+                      : 'text-stone-400 hover:text-white hover:bg-stone-800'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* Exit back to marketplace */}
-        <div className="pt-6 border-t border-stone-800">
-          <Link
-            href="/"
-            className="flex items-center gap-2 px-3 py-2 text-stone-400 hover:text-white text-xs font-medium rounded-xl hover:bg-stone-800 transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Public Marketplace</span>
-          </Link>
+          {/* Exit back to marketplace */}
+          <div className="pt-4 md:pt-6 border-t border-stone-800">
+            <Link
+              href="/"
+              className="flex items-center gap-2 px-3 py-2.5 min-h-[44px] text-stone-400 hover:text-white text-xs font-medium rounded-xl hover:bg-stone-800 transition"
+            >
+              <ArrowLeft className="w-4 h-4 shrink-0" />
+              <span>Public Marketplace</span>
+            </Link>
+          </div>
         </div>
       </aside>
 
       {/* Main Admin Content Body */}
-      <main className="flex-1 p-6 md:p-8 max-w-7xl overflow-y-auto">{children}</main>
+      <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl overflow-y-auto">{children}</main>
     </div>
   );
 }

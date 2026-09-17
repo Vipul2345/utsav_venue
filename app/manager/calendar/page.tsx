@@ -166,10 +166,10 @@ export default function ManagerCalendarPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => setShowExternalModal(true)}
-            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
+            className="px-3.5 py-2.5 min-h-[44px] bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Record Phone / External Booking</span>
@@ -177,7 +177,7 @@ export default function ManagerCalendarPage() {
 
           <button
             onClick={() => setShowBlockModal(true)}
-            className="px-3.5 py-2 bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
+            className="px-3.5 py-2.5 min-h-[44px] bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
           >
             <Lock className="w-4 h-4" />
             <span>+ Block Dates</span>

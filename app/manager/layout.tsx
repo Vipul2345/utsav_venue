@@ -76,13 +76,13 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
       {/* Subheader Navigation */}
       <div className="bg-white border-b border-stone-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-extrabold text-stone-900 uppercase tracking-wide">
+          <div className="flex items-center justify-between gap-3 py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-extrabold text-stone-900 uppercase tracking-wide truncate max-w-[170px] sm:max-w-md">
                 {managerProfile?.businessName || 'Hospitality Manager Portal'}
               </span>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${
                   isVerified
                     ? 'bg-emerald-100 text-emerald-800'
                     : isPending
@@ -96,15 +96,16 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
             <Link
               href="/manager/halls/new"
-              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
+              className="px-3 py-1.5 min-h-[36px] bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5 shrink-0"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span>List New Venue</span>
+              <span className="hidden sm:inline">List New Venue</span>
+              <span className="sm:hidden">New Venue</span>
             </Link>
           </div>
 
           {/* Nav Tabs */}
-          <nav className="flex items-center gap-1 overflow-x-auto text-xs font-semibold py-1">
+          <nav className="flex items-center gap-1 overflow-x-auto text-xs font-semibold py-1.5 scrollbar-none touch-pan-x -mx-4 px-4 sm:mx-0 sm:px-0">
             {MANAGER_NAV.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -116,13 +117,13 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap ${
+                  className={`px-3 py-2 min-h-[40px] rounded-xl transition flex items-center gap-1.5 whitespace-nowrap ${
                     isActive
                       ? 'bg-amber-100/70 text-amber-900 font-bold'
                       : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
                   }`}
                 >
-                  <Icon className="w-4 h-4 text-amber-700" />
+                  <Icon className="w-4 h-4 text-amber-700 shrink-0" />
                   <span>{item.name}</span>
                 </Link>
               );

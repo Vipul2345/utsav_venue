@@ -68,7 +68,7 @@ export default function AdminPaymentsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[700px]">
             <thead className="bg-stone-50 text-stone-500 border-b border-stone-200 font-bold uppercase text-[10px]">
               <tr>
                 <th className="p-4">Reference</th>

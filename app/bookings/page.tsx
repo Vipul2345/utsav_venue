@@ -232,8 +232,8 @@ export default function CustomerBookingsPage() {
               </div>
 
               {/* Price & Actions */}
-              <div className="flex sm:flex-col justify-between items-end gap-3 sm:border-l sm:border-stone-100 sm:pl-6 shrink-0">
-                <div className="text-right">
+              <div className="flex flex-col sm:flex-col justify-between items-stretch sm:items-end gap-3 sm:border-l sm:border-stone-100 sm:pl-6 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-stone-100">
+                <div className="flex items-baseline sm:block justify-between sm:text-right">
                   <span className="text-[10px] text-stone-400 uppercase font-semibold block">Total Paid</span>
                   <span className="text-base font-black text-stone-900">
                     ₹{b.totalAmount.toLocaleString('en-IN')}
@@ -248,7 +248,7 @@ export default function CustomerBookingsPage() {
                 <div className="flex items-center gap-2">
                   <Link
                     href={`/bookings/${b.id}`}
-                    className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition flex items-center gap-1"
+                    className="flex-1 sm:flex-initial px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 min-h-[40px]"
                   >
                     <FileText className="w-3.5 h-3.5" />
                     <span>View Voucher</span>
@@ -258,7 +258,7 @@ export default function CustomerBookingsPage() {
                   {activeTab === 'PAST' && b.reviews?.length === 0 && (
                     <button
                       onClick={() => setReviewModalBooking(b)}
-                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                      className="flex-1 sm:flex-initial px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm min-h-[40px]"
                     >
                       <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
                       <span>Write Review</span>

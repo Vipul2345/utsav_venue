@@ -38,7 +38,7 @@ export default function ListYourVenuePage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
             <Link
-              href="/register?role=HALL_MANAGER"
+              href="/register?role=MANAGER"
               className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-stone-950 font-black text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2"
             >
               <span>Register as Venue Partner</span>
@@ -216,7 +216,7 @@ export default function ListYourVenuePage() {
           </p>
           <div className="pt-2">
             <Link
-              href="/register?role=HALL_MANAGER"
+              href="/register?role=MANAGER"
               className="inline-flex items-center gap-2 px-8 py-3.5 bg-stone-950 hover:bg-black text-white font-black text-xs sm:text-sm rounded-xl shadow transition"
             >
               <span>Create Free Hall Manager Account</span>

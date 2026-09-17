@@ -514,10 +514,10 @@ function SearchContent() {
             />
           </div>
 
-          <div className="flex items-end">
+          <div className="flex items-end sm:col-span-2 lg:col-span-1">
             <button
               onClick={executeSearch}
-              className="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2 min-h-[42px]"
+              className="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2 min-h-[44px]"
             >
               <Search className="w-3.5 h-3.5" />
               <span>Update Search</span>
