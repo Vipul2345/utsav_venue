@@ -439,10 +439,11 @@ export default function Navbar() {
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-              title="Toggle Menu"
+              className="md:hidden p-2 text-stone-700 hover:bg-amber-50 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center transition"
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
@@ -450,176 +451,185 @@ export default function Navbar() {
 
       {/* Role-Specific Mobile Nav Drawer */}
       {mobileMenuOpen && (
-        <div
-          ref={mobileMenuRef}
-          className="md:hidden border-t border-gray-200 bg-white px-4 pt-2 pb-4 space-y-1 animate-in slide-in-from-top-1"
-        >
-          {/* Anonymous Mobile Menu */}
-          {!user && (
-            <>
-              <Link
-                href="/search"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                Find Venues
-              </Link>
-              <Link
-                href="/about"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                About Us
-              </Link>
-              <Link
-                href="/contact"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                Contact Us
-              </Link>
-              <div className="pt-2 border-t border-gray-100 flex gap-2">
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 top-16 bg-stone-900/50 backdrop-blur-sm z-30 md:hidden animate-in fade-in duration-150"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          <div
+            ref={mobileMenuRef}
+            className="md:hidden fixed top-16 left-0 right-0 max-h-[calc(100vh-4rem)] overflow-y-auto z-40 bg-white border-b border-stone-200 shadow-2xl px-5 pt-3 pb-6 space-y-1 animate-in slide-in-from-top-2 duration-150"
+          >
+            {/* Anonymous Mobile Menu */}
+            {!user && (
+              <>
                 <Link
-                  href="/login"
+                  href="/search"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 text-center py-2 text-xs font-bold text-brand-600 bg-brand-50 rounded-xl"
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
                 >
-                  Sign In
+                  Find Venues
                 </Link>
                 <Link
-                  href="/register"
+                  href="/about"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 text-center py-2 text-xs font-bold text-white bg-amber-600 rounded-xl"
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
                 >
-                  Register
+                  About Us
                 </Link>
-              </div>
-            </>
-          )}
+                <Link
+                  href="/contact"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  Contact Us
+                </Link>
+                <div className="pt-3 border-t border-stone-100 flex gap-2">
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 min-h-[44px] flex items-center justify-center text-center py-2.5 text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl transition"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 min-h-[44px] flex items-center justify-center text-center py-2.5 text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-amber-600 rounded-xl shadow transition"
+                  >
+                    Register
+                  </Link>
+                </div>
+              </>
+            )}
 
-          {/* Customer Mobile Menu */}
-          {isCustomer && (
-            <>
-              <Link
-                href="/search"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                Find Venues
-              </Link>
-              <Link
-                href="/bookings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                My Bookings
-              </Link>
-              <Link
-                href="/favorites"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                Saved Venues
-              </Link>
-              <Link
-                href="/about"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                About Us
-              </Link>
-              <Link
-                href="/contact"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                Contact Us
-              </Link>
-            </>
-          )}
+            {/* Customer Mobile Menu */}
+            {isCustomer && (
+              <>
+                <Link
+                  href="/search"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  Find Venues
+                </Link>
+                <Link
+                  href="/bookings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  My Bookings
+                </Link>
+                <Link
+                  href="/favorites"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  Saved Venues
+                </Link>
+                <Link
+                  href="/about"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  About Us
+                </Link>
+                <Link
+                  href="/contact"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  Contact Us
+                </Link>
+              </>
+            )}
 
-          {/* Manager Mobile Menu */}
-          {isManager && (
-            <>
-              <Link
-                href="/manager"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-amber-800 hover:bg-amber-50"
-              >
-                Manager Dashboard
-              </Link>
-              <Link
-                href="/manager/halls"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                My Venues
-              </Link>
-              <Link
-                href="/manager/calendar"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                Calendar & Slots
-              </Link>
-              <Link
-                href="/manager/bookings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                Bookings
-              </Link>
-              <Link
-                href="/manager/payments"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-amber-50"
-              >
-                Payouts
-              </Link>
-            </>
-          )}
+            {/* Manager Mobile Menu */}
+            {isManager && (
+              <>
+                <Link
+                  href="/manager"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-amber-800 hover:bg-amber-50 transition"
+                >
+                  Manager Dashboard
+                </Link>
+                <Link
+                  href="/manager/halls"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  My Venues
+                </Link>
+                <Link
+                  href="/manager/calendar"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  Calendar & Slots
+                </Link>
+                <Link
+                  href="/manager/bookings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  Bookings
+                </Link>
+                <Link
+                  href="/manager/payments"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  Payouts
+                </Link>
+              </>
+            )}
 
-          {/* Admin Mobile Menu */}
-          {isAdmin && (
-            <>
-              <Link
-                href="/admin"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-purple-800 hover:bg-purple-50"
-              >
-                Admin Dashboard
-              </Link>
-              <Link
-                href="/admin/halls"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-purple-50"
-              >
-                Hall Moderation
-              </Link>
-              <Link
-                href="/admin/bookings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-purple-50"
-              >
-                Bookings
-              </Link>
-              <Link
-                href="/admin/locations"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-purple-50"
-              >
-                Location Management
-              </Link>
-              <Link
-                href="/admin/users"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-purple-50"
-              >
-                User & Admin Management
-              </Link>
-            </>
-          )}
-        </div>
+            {/* Admin Mobile Menu */}
+            {isAdmin && (
+              <>
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-800 hover:bg-purple-50 transition"
+                >
+                  Admin Dashboard
+                </Link>
+                <Link
+                  href="/admin/halls"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-purple-50 transition"
+                >
+                  Hall Moderation
+                </Link>
+                <Link
+                  href="/admin/bookings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-purple-50 transition"
+                >
+                  Bookings
+                </Link>
+                <Link
+                  href="/admin/locations"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-purple-50 transition"
+                >
+                  Location Management
+                </Link>
+                <Link
+                  href="/admin/users"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-purple-50 transition"
+                >
+                  User & Admin Management
+                </Link>
+              </>
+            )}
+          </div>
+        </>
       )}
     </header>
   );

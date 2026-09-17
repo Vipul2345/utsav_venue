@@ -251,56 +251,56 @@ function BookingCheckoutContent() {
         {/* Left Column: Venue Summary & Guest Contact */}
         <div className="md:col-span-2 space-y-6">
           {/* Venue & Event Snapshot */}
-          <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-start gap-4">
+          <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row items-start gap-4">
               <img
                 src={hall.media?.[0]?.url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=300&q=80'}
                 alt={hall.name}
-                className="w-24 h-24 rounded-xl object-cover shrink-0"
+                className="w-full sm:w-28 h-44 sm:h-28 rounded-xl object-cover shrink-0"
               />
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-amber-800 uppercase bg-amber-50 px-2 py-0.5 rounded-full">
                   {hall.city?.name}
                 </span>
                 <h3 className="font-extrabold text-base text-stone-900">{hall.name}</h3>
-                <p className="text-xs text-stone-500">{hall.address}</p>
+                <p className="text-xs text-stone-600">{hall.address}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-stone-100 text-xs text-stone-700">
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-amber-600" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-3 border-t border-stone-100 text-xs text-stone-800 font-medium">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-amber-700" />
                 <span>{eventDate}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-amber-600" />
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-700" />
                 <span>{startTime} - {endTime}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-amber-600" />
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-amber-700" />
                 <span>{guestCount} Guests</span>
               </div>
             </div>
           </div>
 
           {/* Primary Guest Details */}
-          <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-sm space-y-3">
+          <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
             <h3 className="font-bold text-sm text-stone-900">Host / Booking Contact</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-[10px] font-bold text-stone-400 uppercase">Primary Guest</span>
+                <span className="text-[10px] font-bold text-stone-600 uppercase">Primary Guest</span>
                 <p className="font-semibold text-stone-900">{currentUser?.fullName}</p>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-stone-400 uppercase">Email Confirmation Sent To</span>
+                <span className="text-[10px] font-bold text-stone-600 uppercase">Email Confirmation Sent To</span>
                 <p className="font-semibold text-stone-900">{currentUser?.email}</p>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-stone-400 uppercase">Phone</span>
+                <span className="text-[10px] font-bold text-stone-600 uppercase">Phone</span>
                 <p className="font-semibold text-stone-900">{currentUser?.phone || '+91 98450 00000'}</p>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-stone-400 uppercase">Catering Selected</span>
+                <span className="text-[10px] font-bold text-stone-600 uppercase">Catering Selected</span>
                 <p className="font-semibold text-stone-900">
                   {cateringType === 'VEG' ? 'Vegetarian Buffet' : cateringType === 'NON_VEG' ? 'Non-Veg & Veg Buffet' : 'No In-House Catering'}
                 </p>
@@ -309,54 +309,54 @@ function BookingCheckoutContent() {
           </div>
 
           {/* Payment Method Selector */}
-          <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
             <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Select Payment Method (Simulated Gateway)</span>
             </h3>
 
-            <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
               <button
                 type="button"
                 onClick={() => setPaymentMethod('UPI')}
-                className={`p-3 rounded-xl border text-center font-semibold transition ${
+                className={`p-3.5 rounded-xl border text-center font-semibold transition min-h-[56px] flex sm:flex-col items-center justify-center gap-2 ${
                   paymentMethod === 'UPI'
                     ? 'border-amber-600 bg-amber-50 text-amber-900 shadow-sm'
                     : 'border-stone-200 hover:bg-stone-50 text-stone-700'
                 }`}
               >
-                <QrCode className="w-5 h-5 mx-auto mb-1 text-amber-700" />
+                <QrCode className="w-5 h-5 text-amber-700 shrink-0" />
                 <span>UPI / QR</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setPaymentMethod('CARD')}
-                className={`p-3 rounded-xl border text-center font-semibold transition ${
+                className={`p-3.5 rounded-xl border text-center font-semibold transition min-h-[56px] flex sm:flex-col items-center justify-center gap-2 ${
                   paymentMethod === 'CARD'
                     ? 'border-amber-600 bg-amber-50 text-amber-900 shadow-sm'
                     : 'border-stone-200 hover:bg-stone-50 text-stone-700'
                 }`}
               >
-                <CreditCard className="w-5 h-5 mx-auto mb-1 text-amber-700" />
+                <CreditCard className="w-5 h-5 text-amber-700 shrink-0" />
                 <span>Credit / Debit Card</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setPaymentMethod('NETBANKING')}
-                className={`p-3 rounded-xl border text-center font-semibold transition ${
+                className={`p-3.5 rounded-xl border text-center font-semibold transition min-h-[56px] flex sm:flex-col items-center justify-center gap-2 ${
                   paymentMethod === 'NETBANKING'
                     ? 'border-amber-600 bg-amber-50 text-amber-900 shadow-sm'
                     : 'border-stone-200 hover:bg-stone-50 text-stone-700'
                 }`}
               >
-                <Building2 className="w-5 h-5 mx-auto mb-1 text-amber-700" />
+                <Building2 className="w-5 h-5 text-amber-700 shrink-0" />
                 <span>Net Banking</span>
               </button>
             </div>
 
-            <div className="p-3 bg-stone-50 rounded-xl text-[11px] text-stone-500">
+            <div className="p-3 bg-stone-50 rounded-xl text-[11px] text-stone-600 leading-relaxed">
               Payments are verified server-side with idempotency checks. Once verified, the slot interval is locked permanently in the database.
             </div>
           </div>

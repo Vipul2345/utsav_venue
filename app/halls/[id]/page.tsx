@@ -193,7 +193,7 @@ export default function HallDetailsPage() {
   const currentImage = mediaList[activeImageIndex]?.url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1200&q=80';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 pb-28 lg:pb-8">
       {/* Title & Location Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-200 pb-6">
         <div className="space-y-1">
@@ -230,7 +230,7 @@ export default function HallDetailsPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-stone-900">Verified Rating</p>
-            <p className="text-[11px] text-stone-500">{hall.reviewCount} verified guest reviews</p>
+            <p className="text-[11px] text-stone-600">{hall.reviewCount} verified guest reviews</p>
           </div>
         </div>
       </div>
@@ -238,7 +238,7 @@ export default function HallDetailsPage() {
       {/* Gallery Showcase */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         {/* Main large display */}
-        <div className="lg:col-span-3 h-96 sm:h-[480px] rounded-2xl overflow-hidden relative shadow-md bg-stone-100">
+        <div className="lg:col-span-3 h-72 sm:h-96 md:h-[480px] rounded-2xl overflow-hidden relative shadow-md bg-stone-100">
           <img
             src={currentImage}
             alt={hall.name}
@@ -252,12 +252,13 @@ export default function HallDetailsPage() {
         </div>
 
         {/* Thumbnails */}
-        <div className="lg:col-span-1 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto lg:h-[480px] pr-1">
+        <div className="lg:col-span-1 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto lg:h-[480px] pr-1 pb-1">
           {mediaList.map((m: any, idx: number) => (
             <button
               key={m.id || idx}
               onClick={() => setActiveImageIndex(idx)}
-              className={`relative h-24 lg:h-28 w-32 lg:w-full rounded-xl overflow-hidden shrink-0 border-2 transition ${
+              aria-label={`View photo ${idx + 1}`}
+              className={`relative h-20 sm:h-24 lg:h-28 w-28 sm:w-32 lg:w-full rounded-xl overflow-hidden shrink-0 border-2 transition ${
                 activeImageIndex === idx
                   ? 'border-amber-600 shadow-md ring-2 ring-amber-400/40'
                   : 'border-transparent opacity-70 hover:opacity-100'
@@ -276,25 +277,25 @@ export default function HallDetailsPage() {
           {/* Quick Specifications Banner */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white border border-stone-200 rounded-2xl p-4 shadow-sm text-center">
             <div>
-              <p className="text-[10px] uppercase font-bold text-stone-400">Guest Capacity</p>
+              <p className="text-[10px] uppercase font-bold text-stone-600">Guest Capacity</p>
               <p className="text-sm font-extrabold text-stone-900 mt-0.5">
                 {hall.minCapacity} – {hall.maxCapacity}
               </p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-stone-400">Indoor Hall Area</p>
+              <p className="text-[10px] uppercase font-bold text-stone-600">Indoor Hall Area</p>
               <p className="text-sm font-extrabold text-stone-900 mt-0.5">
                 {hall.indoorAreaSqFt ? `${hall.indoorAreaSqFt.toLocaleString()} sq.ft` : 'Spacious Hall'}
               </p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-stone-400">Parking</p>
+              <p className="text-[10px] uppercase font-bold text-stone-600">Parking</p>
               <p className="text-sm font-extrabold text-stone-900 mt-0.5">
                 {hall.hasParking ? `${hall.parkingCapacity || 100}+ Cars` : 'Street Only'}
               </p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-stone-400">Rooms Included</p>
+              <p className="text-[10px] uppercase font-bold text-stone-600">Rooms Included</p>
               <p className="text-sm font-extrabold text-stone-900 mt-0.5">
                 {hall.roomsCount} Bridal Suites
               </p>
@@ -438,29 +439,31 @@ export default function HallDetailsPage() {
         </div>
 
         {/* Right Sticky Column: Authoritative Server Price Calculator & Booking Lock */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-24 bg-white border border-amber-300 rounded-3xl p-6 shadow-xl space-y-5">
+        <div id="booking-widget" className="lg:col-span-1 scroll-mt-24">
+          <div className="sticky top-24 bg-white border border-amber-300 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
             <div>
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wide">
+              <span className="text-[10px] font-bold text-stone-600 uppercase tracking-wide">
                 Instant Server Pricing
               </span>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className="text-2xl font-black text-stone-900">
                   ₹{(pricingBreakdown?.totalAmount || hall.pricingRule?.baseRentalPrice || 50000).toLocaleString('en-IN')}
                 </span>
-                <span className="text-xs text-stone-500 font-semibold">Total Estimated</span>
+                <span className="text-xs text-stone-600 font-semibold">Total Estimated</span>
               </div>
             </div>
 
             {/* Occasion Selector */}
             <div>
-              <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
+              <label htmlFor="booking-occasion" className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
                 Occasion *
               </label>
               <select
+                id="booking-occasion"
+                aria-label="Select Occasion for event"
                 value={selectedOccasionId}
                 onChange={(e) => setSelectedOccasionId(e.target.value)}
-                className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:ring-2 focus:ring-amber-500"
               >
                 {hall.occasions?.map((ho: any) => (
                   <option key={ho.occasion.id} value={ho.occasion.id}>
@@ -473,39 +476,45 @@ export default function HallDetailsPage() {
             {/* Date & Time Slot */}
             <div className="space-y-2">
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
+                <label htmlFor="booking-event-date" className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
                   Event Date *
                 </label>
                 <input
+                  id="booking-event-date"
+                  aria-label="Select Event Date"
                   type="date"
                   value={eventDate}
                   min={new Date().toISOString().split('T')[0]}
                   onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
+                  <label htmlFor="booking-start-time" className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
                     Start Time
                   </label>
                   <input
+                    id="booking-start-time"
+                    aria-label="Start Time"
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold"
+                    className="w-full px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
+                  <label htmlFor="booking-end-time" className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
                     End Time
                   </label>
                   <input
+                    id="booking-end-time"
+                    aria-label="End Time"
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold"
+                    className="w-full px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800"
                   />
                 </div>
               </div>
@@ -514,73 +523,75 @@ export default function HallDetailsPage() {
             {/* Guest Count */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] font-bold text-stone-700 uppercase tracking-wide">
+                <label htmlFor="booking-guests" className="text-[11px] font-bold text-stone-700 uppercase tracking-wide">
                   Guests *
                 </label>
-                <span className="text-[10px] text-stone-400 font-semibold">
+                <span className="text-[10px] text-stone-600 font-semibold">
                   Allowed: {hall.minCapacity} – {hall.maxCapacity}
                 </span>
               </div>
               <input
+                id="booking-guests"
+                aria-label="Number of guests"
                 type="number"
                 min={hall.minCapacity}
                 max={hall.maxCapacity}
                 value={guestCount}
                 onChange={(e) => setGuestCount(parseInt(e.target.value || '0', 10))}
-                className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:ring-2 focus:ring-amber-500"
               />
             </div>
 
             {/* Catering Selection */}
             <div>
-              <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1.5">
+              <span className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1.5">
                 Catering Package
-              </label>
+              </span>
               <div className="space-y-1.5 text-xs">
-                <label className="flex items-center justify-between p-2 rounded-xl border border-stone-200 hover:bg-stone-50 cursor-pointer">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 hover:bg-stone-50 cursor-pointer min-h-[44px]">
                   <span className="flex items-center gap-2">
                     <input
                       type="radio"
                       name="catering"
                       checked={cateringType === 'VEG'}
                       onChange={() => setCateringType('VEG')}
-                      className="text-amber-600 focus:ring-amber-500"
+                      className="text-amber-700 focus:ring-amber-500 w-4 h-4"
                     />
-                    <span>Pure Vegetarian Feast</span>
+                    <span className="font-semibold text-stone-800">Pure Vegetarian Feast</span>
                   </span>
                   <span className="font-bold text-stone-900">
                     ₹{hall.pricingRule?.perPlateVegPrice || 650}/plate
                   </span>
                 </label>
 
-                <label className="flex items-center justify-between p-2 rounded-xl border border-stone-200 hover:bg-stone-50 cursor-pointer">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 hover:bg-stone-50 cursor-pointer min-h-[44px]">
                   <span className="flex items-center gap-2">
                     <input
                       type="radio"
                       name="catering"
                       checked={cateringType === 'NON_VEG'}
                       onChange={() => setCateringType('NON_VEG')}
-                      className="text-amber-600 focus:ring-amber-500"
+                      className="text-amber-700 focus:ring-amber-500 w-4 h-4"
                     />
-                    <span>Royal Non-Veg & Veg Buffet</span>
+                    <span className="font-semibold text-stone-800">Royal Non-Veg & Veg Buffet</span>
                   </span>
                   <span className="font-bold text-stone-900">
                     ₹{hall.pricingRule?.perPlateNonVegPrice || 850}/plate
                   </span>
                 </label>
 
-                <label className="flex items-center justify-between p-2 rounded-xl border border-stone-200 hover:bg-stone-50 cursor-pointer">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 hover:bg-stone-50 cursor-pointer min-h-[44px]">
                   <span className="flex items-center gap-2">
                     <input
                       type="radio"
                       name="catering"
                       checked={cateringType === 'NONE'}
                       onChange={() => setCateringType('NONE')}
-                      className="text-amber-600 focus:ring-amber-500"
+                      className="text-amber-700 focus:ring-amber-500 w-4 h-4"
                     />
-                    <span>Hall Only (No Catering)</span>
+                    <span className="font-semibold text-stone-800">Hall Only (No Catering)</span>
                   </span>
-                  <span className="font-bold text-stone-500">₹0</span>
+                  <span className="font-bold text-stone-600">₹0</span>
                 </label>
               </div>
             </div>
@@ -588,21 +599,21 @@ export default function HallDetailsPage() {
             {/* Addons Selection */}
             {hall.addons?.length > 0 && (
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1.5">
+                <span className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1.5">
                   Available Add-Ons
-                </label>
-                <div className="space-y-1.5 text-xs max-h-40 overflow-y-auto pr-1">
+                </span>
+                <div className="space-y-1.5 text-xs max-h-44 overflow-y-auto pr-1">
                   {hall.addons.map((a: any) => (
                     <label
                       key={a.id}
-                      className="flex items-center justify-between p-2 rounded-xl border border-stone-100 hover:bg-stone-50 cursor-pointer"
+                      className="flex items-center justify-between p-2.5 rounded-xl border border-stone-100 hover:bg-stone-50 cursor-pointer min-h-[44px]"
                     >
                       <span className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={selectedAddonIds.includes(a.id)}
                           onChange={() => toggleAddon(a.id)}
-                          className="rounded text-amber-600 focus:ring-amber-500"
+                          className="rounded text-amber-700 focus:ring-amber-500 w-4 h-4"
                         />
                         <span className="font-medium text-stone-800">{a.name}</span>
                       </span>
@@ -684,9 +695,9 @@ export default function HallDetailsPage() {
               type="button"
               disabled={!availabilityStatus.available || calculatingPrice}
               onClick={handleProceedBooking}
-              className={`w-full py-3.5 px-4 font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 ${
+              className={`w-full py-3.5 px-4 font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 min-h-[44px] ${
                 availabilityStatus.available && !calculatingPrice
-                  ? 'bg-gradient-to-r from-brand-600 to-amber-600 hover:from-brand-700 hover:to-amber-700 text-white cursor-pointer'
+                  ? 'bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white cursor-pointer'
                   : 'bg-stone-300 text-stone-500 cursor-not-allowed'
               }`}
             >
@@ -694,11 +705,38 @@ export default function HallDetailsPage() {
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            <p className="text-[10px] text-stone-400 text-center">
+            <p className="text-[10px] text-stone-600 text-center">
               10-minute temporary payment hold guarantees slot during checkout.
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Floating Sticky Booking CTA Bar (Visible on lg:hidden) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
+        <div>
+          <span className="text-[10px] text-stone-600 uppercase font-bold block">Estimated Price</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-base font-black text-stone-900">
+              ₹{(pricingBreakdown?.totalAmount || hall.pricingRule?.baseRentalPrice || 50000).toLocaleString('en-IN')}
+            </span>
+            <span className="text-[11px] text-stone-600 font-semibold"> / event</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            const widget = document.getElementById('booking-widget');
+            if (widget) {
+              widget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }}
+          className="px-5 py-2.5 bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 min-h-[44px]"
+        >
+          <span>Check Dates & Book</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );
