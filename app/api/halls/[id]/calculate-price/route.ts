@@ -9,10 +9,22 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { eventDate, startTime, endTime, guestCount, cateringType = 'NONE', selectedAddonIds = [] } = body;
+    const {
+      eventDate,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      guestCount,
+      cateringType = 'NONE',
+      selectedAddonIds = [],
+    } = body;
 
-    if (!eventDate || !guestCount) {
-      return NextResponse.json({ error: 'eventDate and guestCount are required' }, { status: 400 });
+    const start = startDate || eventDate;
+    const end = endDate || start;
+
+    if (!start || !guestCount) {
+      return NextResponse.json({ error: 'startDate (or eventDate) and guestCount are required' }, { status: 400 });
     }
 
     const hall = await prisma.hall.findFirst({
@@ -26,7 +38,9 @@ export async function POST(
 
     const pricing = await calculateHallPrice({
       hallId: hall.id,
-      eventDate,
+      eventDate: start,
+      startDate: start,
+      endDate: end,
       startTime,
       endTime,
       guestCount: parseInt(guestCount, 10),

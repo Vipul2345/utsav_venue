@@ -28,6 +28,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    if (booking.status !== 'PAYMENT_PENDING') {
+      return NextResponse.json(
+        { error: `Cannot process payment for booking with status ${booking.status}` },
+        { status: 400 }
+      );
+    }
+
+    if (booking.holdExpiresAt && new Date(booking.holdExpiresAt) < new Date()) {
+      return NextResponse.json(
+        { error: 'Temporary payment hold has expired. Please initiate a new booking.' },
+        { status: 400 }
+      );
+    }
+
     if (!razorpay) {
       return NextResponse.json(
         { error: 'Razorpay is not configured on this deployment. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your hosting environment variables.' },

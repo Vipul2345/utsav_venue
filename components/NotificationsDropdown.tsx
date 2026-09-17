@@ -62,8 +62,14 @@ export default function NotificationsDropdown({ user }: { user: any }) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <>
+          <div
+            className="fixed inset-0 top-16 bg-stone-900/40 backdrop-blur-xs z-40 sm:hidden animate-in fade-in duration-150"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="fixed sm:absolute top-16 sm:top-full left-3 right-3 sm:left-auto sm:right-0 sm:mt-2 w-auto sm:w-96 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
             <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
             {unreadCount > 0 && (
               <button
@@ -114,6 +120,7 @@ export default function NotificationsDropdown({ user }: { user: any }) {
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   );

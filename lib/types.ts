@@ -47,8 +47,13 @@ export interface AuthSession {
 }
 
 export interface PricingBreakdown {
+  startDate: string;
+  endDate: string;
+  numberOfDays: number;
+  dailyBaseRental: number;
   baseRental: number;
   isWeekend: boolean;
+  weekendDaysCount: number;
   weekendSurcharge: number;
   cateringType: CateringType;
   perPlateRate: number;

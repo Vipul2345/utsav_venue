@@ -59,6 +59,53 @@ function SearchContent() {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
 
+  // Location Detection State
+  const [locationDetecting, setLocationDetecting] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [detectedCityNotice, setDetectedCityNotice] = useState<string | null>(null);
+
+  const handleDetectLocation = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser. Please pick your city manually.');
+      return;
+    }
+
+    setLocationDetecting(true);
+    setLocationError(null);
+    setDetectedCityNotice(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(`/api/locations/detect?lat=${latitude}&lng=${longitude}`);
+          const data = await res.json();
+          if (res.ok && data.detectedCity) {
+            setCity(data.detectedCity.slug);
+            setDetectedCityNotice(data.message);
+          } else {
+            setLocationError(data.error || 'Could not determine nearest city.');
+          }
+        } catch (err: any) {
+          setLocationError(err.message || 'Failed to detect location.');
+        } finally {
+          setLocationDetecting(false);
+        }
+      },
+      (geoErr) => {
+        setLocationDetecting(false);
+        let msg = 'Could not access your location. Please select your city manually.';
+        if (geoErr.code === geoErr.PERMISSION_DENIED) {
+          msg = 'Location permission was denied. You can search manually or enable location in browser settings.';
+        } else if (geoErr.code === geoErr.TIMEOUT) {
+          msg = 'Location request timed out. Please retry or pick your city manually.';
+        }
+        setLocationError(msg);
+      },
+      { timeout: 10000, enableHighAccuracy: false }
+    );
+  };
+
   // Fetch meta on mount
   useEffect(() => {
     async function loadMeta() {
@@ -444,9 +491,30 @@ function SearchContent() {
       <div className="bg-white border border-stone-200 rounded-2xl shadow-sm p-4 sm:p-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <div>
-            <label htmlFor="search-city" className="block text-[10px] font-bold text-stone-600 uppercase tracking-wide mb-1">
-              City
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label htmlFor="search-city" className="block text-[10px] font-bold text-stone-600 uppercase tracking-wide">
+                City
+              </label>
+              <button
+                type="button"
+                onClick={handleDetectLocation}
+                disabled={locationDetecting}
+                className="text-[10px] font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer transition"
+                title="Detect city via current GPS location"
+              >
+                {locationDetecting ? (
+                  <>
+                    <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                    <span>Detecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-2.5 h-2.5" />
+                    <span>Detect Location</span>
+                  </>
+                )}
+              </button>
+            </div>
             <select
               id="search-city"
               aria-label="Select City"
@@ -461,6 +529,25 @@ function SearchContent() {
                 </option>
               ))}
             </select>
+            {detectedCityNotice && (
+              <div className="mt-1.5 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg flex items-center justify-between">
+                <span className="line-clamp-1">{detectedCityNotice}</span>
+                <button type="button" onClick={() => setDetectedCityNotice(null)} className="text-stone-400 hover:text-stone-700 ml-1">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {locationError && (
+              <div className="mt-1.5 text-[11px] text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg flex items-center justify-between">
+                <span className="line-clamp-1">{locationError}</span>
+                <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                  <button type="button" onClick={handleDetectLocation} className="font-bold underline cursor-pointer">Retry</button>
+                  <button type="button" onClick={() => setLocationError(null)} className="text-stone-400 hover:text-stone-700">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -736,13 +823,35 @@ function SearchContent() {
                         )}
                       </div>
 
-                      <Link
-                        href={`/halls/${hall.slug || hall.id}`}
-                        className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1 min-h-[44px] sm:min-h-0"
-                      >
-                        <span>Check Dates & Pricing</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const destination =
+                              hall.latitude && hall.longitude
+                                ? `${hall.latitude},${hall.longitude}`
+                                : encodeURIComponent(`${hall.name}, ${hall.address}, ${hall.city?.name}`);
+                            window.open(
+                              `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
+                              '_blank',
+                              'noopener,noreferrer'
+                            );
+                          }}
+                          className="w-full sm:w-auto px-3.5 py-2.5 border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-bold text-xs rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 min-h-[44px] sm:min-h-0"
+                          title="Get Directions & Location on Google Maps"
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                          <span>Get Location</span>
+                        </button>
+
+                        <Link
+                          href={`/halls/${hall.slug || hall.id}`}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1 min-h-[44px] sm:min-h-0"
+                        >
+                          <span>Check Dates & Pricing</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 import { confirmBookingPayment } from '@/lib/services/bookingService';
 
 export async function POST(request: Request) {
@@ -12,8 +13,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { bookingId, amount, paymentMethod = 'UPI' } = body;
 
-    if (!bookingId || !amount) {
-      return NextResponse.json({ error: 'bookingId and amount are required' }, { status: 400 });
+    if (!bookingId) {
+      return NextResponse.json({ error: 'bookingId is required' }, { status: 400 });
+    }
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+    }
+
+    if (booking.customerId !== session.userId && session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Generate or use verified transaction reference

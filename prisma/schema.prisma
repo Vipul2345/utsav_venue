@@ -287,6 +287,9 @@ model Booking {
   occasionId             String?
 
   eventDate              String    // YYYY-MM-DD
+  startDate              String?   // YYYY-MM-DD
+  endDate                String?   // YYYY-MM-DD
+  numberOfDays           Int       @default(1)
   startTime              String    // HH:mm, e.g. "18:00"
   endTime                String    // HH:mm, e.g. "23:00"
   guestCount             Int
@@ -322,6 +325,7 @@ model Booking {
   reviews  Review[]
 
   @@index([hallId, eventDate])
+  @@index([hallId, startDate, endDate])
   @@index([customerId])
   @@index([status])
   @@index([bookingNumber])

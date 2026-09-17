@@ -44,8 +44,12 @@ describe('Transactional Email Engine & Observability Suite', () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     resetResendClient();
+    if (testCustomer?.id) {
+      await prisma.payment.deleteMany({ where: { booking: { customerId: testCustomer.id } } });
+      await prisma.booking.deleteMany({ where: { customerId: testCustomer.id } });
+    }
   });
 
   /* =========================================================================

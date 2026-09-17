@@ -17,6 +17,7 @@ import {
   Heart,
   TrendingUp,
   CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 
 const CITIES = [
@@ -45,6 +46,34 @@ export default function HomePage() {
   const [selectedOccasion, setSelectedOccasion] = useState('wedding');
   const [eventDate, setEventDate] = useState('');
   const [guestCount, setGuestCount] = useState('300');
+
+  // Location detection state
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+
+  const handleDetectLocation = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) return;
+    setDetectingLocation(true);
+    setLocationNotice(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`/api/locations/detect?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+          const data = await res.json();
+          if (res.ok && data.detectedCity) {
+            setSelectedCity(data.detectedCity.slug);
+            setLocationNotice(data.message);
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      () => setDetectingLocation(false),
+      { timeout: 10000, enableHighAccuracy: false }
+    );
+  };
 
   // Dynamic ranking data from backend
   const [topHalls, setTopHalls] = useState<any[]>([]);
@@ -127,9 +156,30 @@ export default function HomePage() {
             <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {/* City */}
               <div>
-                <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wide mb-1">
-                  City
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wide">
+                    City
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDetectLocation}
+                    disabled={detectingLocation}
+                    className="text-[10px] font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer transition"
+                    title="Detect city via current GPS location"
+                  >
+                    {detectingLocation ? (
+                      <>
+                        <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                        <span>Detecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="w-2.5 h-2.5" />
+                        <span>Detect</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <div className="relative">
                   <MapPin className="w-4 h-4 absolute left-3 top-3 text-amber-600" />
                   <select
@@ -144,6 +194,11 @@ export default function HomePage() {
                     ))}
                   </select>
                 </div>
+                {locationNotice && (
+                  <p className="text-[10px] text-amber-800 bg-amber-50 rounded-lg p-1 mt-1 font-semibold line-clamp-1">
+                    {locationNotice}
+                  </p>
+                )}
               </div>
 
               {/* Occasion */}

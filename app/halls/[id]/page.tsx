@@ -48,7 +48,8 @@ export default function HallDetailsPage() {
 
   // Booking & Pricing state
   const [selectedOccasionId, setSelectedOccasionId] = useState<string>('');
-  const [eventDate, setEventDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [startTime, setStartTime] = useState('16:00');
   const [endTime, setEndTime] = useState('23:00');
   const [guestCount, setGuestCount] = useState<number>(300);
@@ -151,18 +152,46 @@ export default function HallDetailsPage() {
     }
   };
 
-  // Set default date (e.g. 1 month in future)
+  // Set default date range (1 month in future, 1 day duration)
   useEffect(() => {
-    if (!eventDate) {
+    if (!startDate) {
       const future = new Date();
       future.setDate(future.getDate() + 30);
-      setEventDate(future.toISOString().split('T')[0]);
+      const str = future.toISOString().split('T')[0];
+      setStartDate(str);
+      setEndDate(str);
     }
   }, []);
 
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    if (!endDate || val > endDate) {
+      setEndDate(val);
+    }
+  };
+
+  const handleEndDateChange = (val: string) => {
+    if (val < startDate) {
+      return; // End date cannot be earlier than start date
+    }
+    setEndDate(val);
+  };
+
+  const diffDays =
+    startDate && endDate
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+              (1000 * 60 * 60 * 24)
+          )
+        )
+      : 0;
+  const numberOfDays = diffDays + 1;
+
   // Recalculate price and availability when parameters change
   useEffect(() => {
-    if (!hall || !eventDate || !guestCount) return;
+    if (!hall || !startDate || !endDate || !guestCount) return;
 
     let isCancelled = false;
 
@@ -174,7 +203,9 @@ export default function HallDetailsPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            eventDate,
+            eventDate: startDate,
+            startDate,
+            endDate,
             startTime,
             endTime,
             guestCount,
@@ -189,7 +220,7 @@ export default function HallDetailsPage() {
 
         // 2. Check slot availability
         const availRes = await fetch(
-          `/api/halls/${hall.id}/availability?date=${eventDate}&startTime=${startTime}&endTime=${endTime}`
+          `/api/halls/${hall.id}/availability?date=${startDate}&startDate=${startDate}&endDate=${endDate}&startTime=${startTime}&endTime=${endTime}`
         );
         if (availRes.ok && !isCancelled) {
           const aData = await availRes.json();
@@ -210,7 +241,7 @@ export default function HallDetailsPage() {
     return () => {
       isCancelled = true;
     };
-  }, [hall, eventDate, startTime, endTime, guestCount, cateringType, selectedAddonIds]);
+  }, [hall, startDate, endDate, startTime, endTime, guestCount, cateringType, selectedAddonIds]);
 
   const toggleAddon = (addonId: string) => {
     setSelectedAddonIds((prev) =>
@@ -224,7 +255,9 @@ export default function HallDetailsPage() {
     // Navigate to checkout with pre-selected parameters
     const params = new URLSearchParams({
       occasionId: selectedOccasionId,
-      date: eventDate,
+      date: startDate,
+      startDate,
+      endDate,
       startTime,
       endTime,
       guests: guestCount.toString(),
@@ -336,6 +369,31 @@ export default function HallDetailsPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Mobile Top Action Bar: 'Check dates and pricing' toward the top */}
+      <div className="lg:hidden bg-gradient-to-r from-amber-500/10 via-amber-100/40 to-orange-50 border border-amber-200 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3">
+        <div>
+          <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wide block">
+            Instant Availability & Pricing
+          </span>
+          <span className="text-xs font-bold text-stone-800">
+            Select dates & lock your celebration slot
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const widget = document.getElementById('booking-widget');
+            if (widget) {
+              widget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }}
+          className="px-4 py-2.5 bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 shrink-0 min-h-[44px]"
+        >
+          <span>Check dates and pricing</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* Two Column Layout: Details & Left Content vs Right Authoritative Booking Box */}
@@ -675,21 +733,46 @@ export default function HallDetailsPage() {
               </select>
             </div>
 
-            {/* Date & Time Slot */}
-            <div className="space-y-2">
-              <div>
-                <label htmlFor="booking-event-date" className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
-                  Event Date *
-                </label>
-                <input
-                  id="booking-event-date"
-                  aria-label="Select Event Date"
-                  type="date"
-                  value={eventDate}
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:ring-2 focus:ring-amber-500"
-                />
+            {/* Multi-Day Date Range & Time Slot */}
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label htmlFor="booking-start-date" className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
+                    Start Date *
+                  </label>
+                  <input
+                    id="booking-start-date"
+                    aria-label="Select Event Start Date"
+                    type="date"
+                    value={startDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="booking-end-date" className="block text-[11px] font-bold text-stone-700 uppercase tracking-wide mb-1">
+                    End Date *
+                  </label>
+                  <input
+                    id="booking-end-date"
+                    aria-label="Select Event End Date"
+                    type="date"
+                    value={endDate}
+                    min={startDate || new Date().toISOString().split('T')[0]}
+                    onChange={(e) => handleEndDateChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* Duration Summary Badge */}
+              <div className="flex items-center justify-between px-3 py-1.5 bg-amber-50/80 border border-amber-200/70 rounded-xl text-xs">
+                <span className="text-[11px] font-medium text-stone-600">Selected Duration:</span>
+                <span className="font-extrabold text-amber-900 bg-white px-2 py-0.5 rounded-lg border border-amber-200 shadow-2xs">
+                  {numberOfDays} Day{numberOfDays > 1 ? 's' : ''} (Inclusive)
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -848,13 +931,27 @@ export default function HallDetailsPage() {
             {pricingBreakdown && (
               <div className="pt-3 border-t border-stone-200 space-y-1.5 text-xs">
                 <div className="flex justify-between text-stone-600">
-                  <span>Base Venue Rental</span>
+                  <span>
+                    Base Venue Rental
+                    {pricingBreakdown.numberOfDays > 1 && (
+                      <span className="text-[10px] text-stone-500 ml-1">
+                        ({pricingBreakdown.numberOfDays} days × ₹{(pricingBreakdown.dailyBaseRental || 0).toLocaleString('en-IN')})
+                      </span>
+                    )}
+                  </span>
                   <span>₹{pricingBreakdown.baseRental.toLocaleString('en-IN')}</span>
                 </div>
 
-                {pricingBreakdown.isWeekend && pricingBreakdown.weekendSurcharge > 0 && (
+                {pricingBreakdown.weekendSurcharge > 0 && (
                   <div className="flex justify-between text-amber-800 font-medium">
-                    <span>Weekend Prime Surcharge</span>
+                    <span>
+                      Weekend Prime Surcharge
+                      {pricingBreakdown.weekendDaysCount > 0 && (
+                        <span className="text-[10px] text-amber-700 ml-1">
+                          ({pricingBreakdown.weekendDaysCount} weekend day{pricingBreakdown.weekendDaysCount > 1 ? 's' : ''})
+                        </span>
+                      )}
+                    </span>
                     <span>+₹{pricingBreakdown.weekendSurcharge.toLocaleString('en-IN')}</span>
                   </div>
                 )}
@@ -917,26 +1014,39 @@ export default function HallDetailsPage() {
       {/* Mobile Floating Sticky Booking CTA Bar (Visible on lg:hidden) */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-2xl flex items-center justify-between gap-3">
         <div>
-          <span className="text-[10px] text-stone-600 uppercase font-bold block">Estimated Price</span>
+          <span className="text-[10px] text-stone-600 uppercase font-bold block">
+            {pricingBreakdown?.numberOfDays && pricingBreakdown.numberOfDays > 1
+              ? `Estimated Total (${pricingBreakdown.numberOfDays} Days)`
+              : 'Estimated Price'}
+          </span>
           <div className="flex items-baseline gap-1">
             <span className="text-base font-black text-stone-900">
               ₹{(pricingBreakdown?.totalAmount || hall.pricingRule?.baseRentalPrice || 50000).toLocaleString('en-IN')}
             </span>
-            <span className="text-[11px] text-stone-600 font-semibold"> / event</span>
+            <span className="text-[11px] text-stone-600 font-semibold"> total</span>
           </div>
         </div>
 
         <button
           type="button"
+          disabled={!availabilityStatus.available || calculatingPrice}
           onClick={() => {
-            const widget = document.getElementById('booking-widget');
-            if (widget) {
-              widget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (availabilityStatus.available && !calculatingPrice) {
+              handleProceedBooking();
+            } else {
+              const widget = document.getElementById('booking-widget');
+              if (widget) {
+                widget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
             }
           }}
-          className="px-5 py-2.5 bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 min-h-[44px]"
+          className={`px-5 py-2.5 font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 min-h-[44px] ${
+            availabilityStatus.available && !calculatingPrice
+              ? 'bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white cursor-pointer'
+              : 'bg-stone-300 text-stone-500 cursor-not-allowed'
+          }`}
         >
-          <span>Check Dates & Book</span>
+          <span>{availabilityStatus.available ? 'Proceed to book slot' : 'Check Dates'}</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>

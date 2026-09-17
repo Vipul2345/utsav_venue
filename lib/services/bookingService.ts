@@ -1,5 +1,5 @@
 import prisma from '../prisma';
-import { isTimeIntervalOverlapping } from './availabilityService';
+import { isTimeIntervalOverlapping, isDateRangeOverlapping } from './availabilityService';
 import { calculateHallPrice } from './pricingService';
 import { createAuditLog } from './auditService';
 import { createNotification } from './notificationService';
@@ -10,9 +10,11 @@ export interface CreateBookingInput {
   hallId: string;
   customerId: string;
   occasionId: string;
-  eventDate: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string;   // HH:mm
+  eventDate?: string; // YYYY-MM-DD (legacy / fallback)
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string;   // YYYY-MM-DD
+  startTime: string;  // HH:mm
+  endTime: string;    // HH:mm
   guestCount: number;
   cateringType: CateringType;
   selectedAddonIds?: string[];
@@ -22,7 +24,9 @@ export interface CreateExternalBookingInput {
   hallId: string;
   managerId: string;
   occasionId?: string;
-  eventDate: string;
+  eventDate?: string;
+  startDate?: string;
+  endDate?: string;
   startTime: string;
   endTime: string;
   guestCount: number;
@@ -40,12 +44,21 @@ export async function createBookingWithLock(input: CreateBookingInput) {
     customerId,
     occasionId,
     eventDate,
+    startDate,
+    endDate,
     startTime,
     endTime,
     guestCount,
     cateringType,
     selectedAddonIds = [],
   } = input;
+
+  const reqStart = startDate || eventDate || '';
+  const reqEnd = endDate || reqStart;
+
+  if (!reqStart) {
+    throw new Error('Start date or event date is required');
+  }
 
   // Validate basic time consistency
   const [h1, m1] = startTime.split(':').map(Number);
@@ -54,11 +67,19 @@ export async function createBookingWithLock(input: CreateBookingInput) {
     throw new Error('End time must be later than start time');
   }
 
-  // Validate date is not in past
+  // Validate dates
   const todayStr = new Date().toISOString().split('T')[0];
-  if (eventDate < todayStr) {
-    throw new Error('Booking date cannot be in the past');
+  if (reqStart < todayStr) {
+    throw new Error('Booking start date cannot be in the past');
   }
+  if (reqEnd < reqStart) {
+    throw new Error('Booking end date cannot be earlier than start date');
+  }
+
+  const startMs = new Date(`${reqStart}T00:00:00Z`).getTime();
+  const endMs = new Date(`${reqEnd}T00:00:00Z`).getTime();
+  const diffDays = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
+  const numberOfDays = Math.max(1, diffDays + 1);
 
   return prisma.$transaction(async (tx) => {
     // 0. Acquire pessimistic row-level write lock on the venue row to strictly serialize concurrent booking attempts at DB level
@@ -109,23 +130,27 @@ export async function createBookingWithLock(input: CreateBookingInput) {
     const blocks = await tx.availabilityBlock.findMany({
       where: {
         hallId,
-        startDate: { lte: eventDate },
-        endDate: { gte: eventDate },
+        startDate: { lte: reqEnd },
+        endDate: { gte: reqStart },
       },
     });
 
     for (const block of blocks) {
-      if (isTimeIntervalOverlapping(startTime, endTime, block.startTime, block.endTime)) {
-        throw new Error(`Venue is blocked by management for: ${block.reason}`);
+      if (isDateRangeOverlapping(block.startDate, block.endDate, reqStart, reqEnd)) {
+        if (reqStart !== reqEnd || block.startDate !== block.endDate) {
+          throw new Error(`Venue is blocked by management for: ${block.reason}`);
+        }
+        if (isTimeIntervalOverlapping(startTime, endTime, block.startTime, block.endTime)) {
+          throw new Error(`Venue is blocked by management for: ${block.reason}`);
+        }
       }
     }
 
-    // 3. Concurrency Check: Overlapping Bookings (Confirmed or Active Payment Hold)
+    // 3. Concurrency Check: Overlapping Bookings across entire range (Confirmed or Active Payment Hold)
     const now = new Date();
     const existingBookings = await tx.booking.findMany({
       where: {
         hallId,
-        eventDate,
         OR: [
           { status: 'CONFIRMED' },
           {
@@ -133,19 +158,44 @@ export async function createBookingWithLock(input: CreateBookingInput) {
             holdExpiresAt: { gt: now },
           },
         ],
+        AND: [
+          {
+            OR: [
+              {
+                startDate: { lte: reqEnd },
+                endDate: { gte: reqStart },
+              },
+              {
+                startDate: null,
+                eventDate: { lte: reqEnd, gte: reqStart },
+              },
+            ],
+          },
+        ],
       },
     });
 
     for (const eb of existingBookings) {
-      if (isTimeIntervalOverlapping(startTime, endTime, eb.startTime, eb.endTime)) {
-        throw new Error('This time slot is already reserved or held by another customer.');
+      const ebStart = eb.startDate || eb.eventDate;
+      const ebEnd = eb.endDate || ebStart;
+
+      if (isDateRangeOverlapping(ebStart, ebEnd, reqStart, reqEnd)) {
+        if (reqStart === reqEnd && ebStart === ebEnd) {
+          if (isTimeIntervalOverlapping(startTime, endTime, eb.startTime, eb.endTime)) {
+            throw new Error('This time slot is already reserved or held by another customer.');
+          }
+        } else {
+          throw new Error('The selected date range overlaps with an existing booking or active hold.');
+        }
       }
     }
 
     // 4. Calculate Authoritative Server-Side Pricing
     const pricing = await calculateHallPrice({
       hallId,
-      eventDate,
+      eventDate: reqStart,
+      startDate: reqStart,
+      endDate: reqEnd,
       startTime,
       endTime,
       guestCount,
@@ -168,7 +218,10 @@ export async function createBookingWithLock(input: CreateBookingInput) {
         hallId,
         customerId,
         occasionId,
-        eventDate,
+        eventDate: reqStart,
+        startDate: reqStart,
+        endDate: reqEnd,
+        numberOfDays,
         startTime,
         endTime,
         guestCount,
@@ -209,6 +262,8 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
     managerId,
     occasionId,
     eventDate,
+    startDate,
+    endDate,
     startTime,
     endTime,
     guestCount,
@@ -216,6 +271,14 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
     customerPhone,
     totalAmount = 0,
   } = input;
+
+  const reqStart = startDate || eventDate || '';
+  const reqEnd = endDate || reqStart;
+
+  const startMs = new Date(`${reqStart}T00:00:00Z`).getTime();
+  const endMs = new Date(`${reqEnd}T00:00:00Z`).getTime();
+  const diffDays = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
+  const numberOfDays = Math.max(1, diffDays + 1);
 
   return prisma.$transaction(async (tx) => {
     // Verify manager owns this hall
@@ -227,22 +290,43 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
       throw new Error('Venue not found or unauthorized');
     }
 
-    // Check availability
+    // Check availability across range
     const now = new Date();
     const existing = await tx.booking.findMany({
       where: {
         hallId,
-        eventDate,
         OR: [
           { status: 'CONFIRMED' },
           { status: 'PAYMENT_PENDING', holdExpiresAt: { gt: now } },
+        ],
+        AND: [
+          {
+            OR: [
+              {
+                startDate: { lte: reqEnd },
+                endDate: { gte: reqStart },
+              },
+              {
+                startDate: null,
+                eventDate: { lte: reqEnd, gte: reqStart },
+              },
+            ],
+          },
         ],
       },
     });
 
     for (const eb of existing) {
-      if (isTimeIntervalOverlapping(startTime, endTime, eb.startTime, eb.endTime)) {
-        throw new Error('This time slot overlaps with an existing booking.');
+      const ebStart = eb.startDate || eb.eventDate;
+      const ebEnd = eb.endDate || ebStart;
+      if (isDateRangeOverlapping(ebStart, ebEnd, reqStart, reqEnd)) {
+        if (reqStart === reqEnd && ebStart === ebEnd) {
+          if (isTimeIntervalOverlapping(startTime, endTime, eb.startTime, eb.endTime)) {
+            throw new Error('This time slot overlaps with an existing booking.');
+          }
+        } else {
+          throw new Error('The selected date range overlaps with an existing booking or active hold.');
+        }
       }
     }
 
@@ -259,7 +343,10 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
         externalCustomerName: customerName,
         externalCustomerPhone: customerPhone,
         occasionId: occasionId || null,
-        eventDate,
+        eventDate: reqStart,
+        startDate: reqStart,
+        endDate: reqEnd,
+        numberOfDays,
         startTime,
         endTime,
         guestCount,
@@ -282,7 +369,7 @@ export async function confirmBookingPayment(params: {
   bookingId: string;
   providerTransactionId: string;
   providerSignature?: string;
-  amount: number;
+  amount?: number;
   waitForEmail?: boolean;
 }) {
   const { bookingId, providerTransactionId, providerSignature, amount, waitForEmail = false } = params;
@@ -317,32 +404,61 @@ export async function confirmBookingPayment(params: {
 
     // Verify hold has not expired
     if (booking.holdExpiresAt && booking.holdExpiresAt < new Date()) {
-      // Slot hold expired! Check if slot is still unbooked by anyone else
-      const conflict = await tx.booking.findFirst({
+      const bStart = booking.startDate || booking.eventDate;
+      const bEnd = booking.endDate || bStart;
+
+      const conflicts = await tx.booking.findMany({
         where: {
           hallId: booking.hallId,
-          eventDate: booking.eventDate,
           id: { not: booking.id },
           status: 'CONFIRMED',
+          AND: [
+            {
+              OR: [
+                {
+                  startDate: { lte: bEnd },
+                  endDate: { gte: bStart },
+                },
+                {
+                  startDate: null,
+                  eventDate: { lte: bEnd, gte: bStart },
+                },
+              ],
+            },
+          ],
         },
       });
 
-      if (conflict && isTimeIntervalOverlapping(booking.startTime, booking.endTime, conflict.startTime, conflict.endTime)) {
-        await tx.booking.update({
-          where: { id: booking.id },
-          data: { status: 'HOLD_EXPIRED' },
-        });
-        throw new Error('The temporary hold on this slot expired and it was booked by another customer.');
+      for (const conflict of conflicts) {
+        const cStart = conflict.startDate || conflict.eventDate;
+        const cEnd = conflict.endDate || cStart;
+        if (isDateRangeOverlapping(bStart, bEnd, cStart, cEnd)) {
+          if (bStart === bEnd && cStart === cEnd) {
+            if (isTimeIntervalOverlapping(booking.startTime, booking.endTime, conflict.startTime, conflict.endTime)) {
+              await tx.booking.update({
+                where: { id: booking.id },
+                data: { status: 'HOLD_EXPIRED' },
+              });
+              throw new Error('The temporary hold on this slot expired and it was booked by another customer.');
+            }
+          } else {
+            await tx.booking.update({
+              where: { id: booking.id },
+              data: { status: 'HOLD_EXPIRED' },
+            });
+            throw new Error('The temporary hold on this slot expired and it was booked by another customer.');
+          }
+        }
       }
     }
 
-    // Generate payment record
+    // Generate payment record using authoritative server amount
     const paymentNumber = `PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     await tx.payment.create({
       data: {
         bookingId: booking.id,
         paymentNumber,
-        amount,
+        amount: booking.totalAmount,
         currency: 'INR',
         status: 'SUCCESS',
         provider: 'MOCK_GATEWAY',
@@ -362,12 +478,17 @@ export async function confirmBookingPayment(params: {
     });
 
     // Notifications
+    const dateLabel =
+      booking.startDate && booking.endDate && booking.startDate !== booking.endDate
+        ? `${booking.startDate} to ${booking.endDate} (${booking.numberOfDays} days)`
+        : booking.eventDate;
+
     if (booking.customerId) {
       await tx.notification.create({
         data: {
           userId: booking.customerId,
           title: 'Booking Confirmed!',
-          message: `Your booking ${booking.bookingNumber} for ${booking.hall.name} on ${booking.eventDate} is confirmed.`,
+          message: `Your booking ${booking.bookingNumber} for ${booking.hall.name} on ${dateLabel} is confirmed.`,
           type: 'BOOKING',
           link: `/bookings/${booking.id}`,
         },
@@ -379,7 +500,7 @@ export async function confirmBookingPayment(params: {
         data: {
           userId: booking.hall.manager.user.id,
           title: 'New Confirmed Booking',
-          message: `Booking ${booking.bookingNumber} confirmed for ${booking.hall.name} on ${booking.eventDate} (${booking.startTime} - ${booking.endTime}).`,
+          message: `Booking ${booking.bookingNumber} confirmed for ${booking.hall.name} on ${dateLabel} (${booking.startTime} - ${booking.endTime}).`,
           type: 'BOOKING',
           link: `/manager/bookings`,
         },
@@ -396,7 +517,7 @@ export async function confirmBookingPayment(params: {
         entityId: booking.id,
         details: JSON.stringify({
           bookingNumber: booking.bookingNumber,
-          amount,
+          amount: amount || booking.totalAmount,
           providerTransactionId,
         }),
       },

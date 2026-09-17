@@ -64,6 +64,16 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // 3. Guard /booking/:path* (must be authenticated to access booking/payment flow)
+  if (pathname.startsWith('/booking')) {
+    if (!session) {
+      const loginUrl = new URL('/login', request.url);
+      const returnUrl = pathname + request.nextUrl.search;
+      loginUrl.searchParams.set('redirect', returnUrl);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 
@@ -71,5 +81,6 @@ export const config = {
   matcher: [
     '/admin/:path*',
     '/manager/:path*',
+    '/booking/:path*',
   ],
 };

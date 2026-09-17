@@ -11,7 +11,8 @@ import { useEffect, RefObject } from 'react';
 export function useModalDismiss(
   ref: RefObject<HTMLElement | null>,
   onDismiss: () => void,
-  isOpen: boolean = true
+  isOpen: boolean = true,
+  ignoreRef?: RefObject<HTMLElement | null>
 ) {
   useEffect(() => {
     if (!isOpen) return;
@@ -24,19 +25,24 @@ export function useModalDismiss(
     }
 
     function handleClickOutside(event: MouseEvent | TouchEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        onDismiss();
+      const target = event.target as Node;
+      if (ref.current && ref.current.contains(target)) {
+        return;
       }
+      if (ignoreRef?.current && ignoreRef.current.contains(target)) {
+        return;
+      }
+      onDismiss();
     }
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [ref, onDismiss, isOpen]);
+  }, [ref, onDismiss, isOpen, ignoreRef]);
 }

@@ -29,7 +29,9 @@ function BookingCheckoutContent() {
   const hallId = params.hallId as string;
 
   const occasionId = searchParams.get('occasionId') || '';
-  const eventDate = searchParams.get('date') || '';
+  const startDate = searchParams.get('startDate') || searchParams.get('date') || '';
+  const endDate = searchParams.get('endDate') || startDate;
+  const eventDate = startDate;
   const startTime = searchParams.get('startTime') || '16:00';
   const endTime = searchParams.get('endTime') || '23:00';
   const guestCount = parseInt(searchParams.get('guests') || '300', 10);
@@ -92,7 +94,9 @@ function BookingCheckoutContent() {
         body: JSON.stringify({
           hallId: hall.id,
           occasionId: occasionId || hall.occasions[0]?.occasion.id,
-          eventDate,
+          eventDate: startDate,
+          startDate,
+          endDate,
           startTime,
           endTime,
           guestCount,
@@ -372,15 +376,34 @@ function BookingCheckoutContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-3 border-t border-stone-100 text-xs text-stone-800 font-medium">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-amber-700" />
-                <span>{eventDate}</span>
+                <Calendar className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>
+                  {startDate === endDate ? (
+                    startDate
+                  ) : (
+                    <span>
+                      {startDate} to {endDate}{' '}
+                      <span className="font-extrabold text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded-full ml-1">
+                        {createdBooking?.numberOfDays ||
+                          Math.max(
+                            1,
+                            Math.round(
+                              (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+                                (1000 * 60 * 60 * 24)
+                            ) + 1
+                          )}{' '}
+                        Days
+                      </span>
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-amber-700" />
+                <Clock className="w-4 h-4 text-amber-700 shrink-0" />
                 <span>{startTime} - {endTime}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-amber-700" />
+                <Users className="w-4 h-4 text-amber-700 shrink-0" />
                 <span>{guestCount} Guests</span>
               </div>
             </div>

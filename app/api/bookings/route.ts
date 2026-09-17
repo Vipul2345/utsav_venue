@@ -16,6 +16,8 @@ export async function POST(request: Request) {
       hallId,
       occasionId,
       eventDate,
+      startDate,
+      endDate,
       startTime,
       endTime,
       guestCount,
@@ -23,16 +25,28 @@ export async function POST(request: Request) {
       selectedAddonIds = [],
     } = body;
 
-    if (!hallId || !occasionId || !eventDate || !startTime || !endTime || !guestCount) {
+    const reqStart = startDate || eventDate;
+    const reqEnd = endDate || reqStart;
+
+    if (!hallId || !occasionId || !reqStart || !startTime || !endTime || !guestCount) {
       return NextResponse.json(
         { error: 'Missing required booking parameters: venue, occasion, date, time range, and guest count are required.' },
         { status: 400 }
       );
     }
 
-    const dateVal = validateEventDate(eventDate);
-    if (!dateVal.isValid) {
-      return NextResponse.json({ error: dateVal.error }, { status: 400 });
+    const startVal = validateEventDate(reqStart);
+    if (!startVal.isValid) {
+      return NextResponse.json({ error: startVal.error }, { status: 400 });
+    }
+
+    if (reqEnd < reqStart) {
+      return NextResponse.json({ error: 'End date cannot be earlier than start date.' }, { status: 400 });
+    }
+
+    const endVal = validateEventDate(reqEnd);
+    if (!endVal.isValid) {
+      return NextResponse.json({ error: endVal.error }, { status: 400 });
     }
 
     const timeVal = validateTimeInterval(startTime, endTime);
@@ -50,7 +64,9 @@ export async function POST(request: Request) {
       hallId,
       customerId: session.userId,
       occasionId,
-      eventDate,
+      eventDate: reqStart,
+      startDate: reqStart,
+      endDate: reqEnd,
       startTime,
       endTime,
       guestCount: parseInt(guestCount, 10),

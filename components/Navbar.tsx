@@ -33,9 +33,10 @@ export default function Navbar() {
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   useModalDismiss(userMenuRef, () => setUserMenuOpen(false), userMenuOpen);
-  useModalDismiss(mobileMenuRef, () => setMobileMenuOpen(false), mobileMenuOpen);
+  useModalDismiss(mobileMenuRef, () => setMobileMenuOpen(false), mobileMenuOpen, mobileMenuButtonRef);
 
   const fetchUser = async () => {
     try {
@@ -77,13 +78,13 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
-          <div className="flex items-center gap-2 sm:gap-6 min-w-0">
-            <Link href="/" className="flex items-center gap-2 group min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition shrink-0">
+          <div className="flex items-center gap-2 sm:gap-6 shrink-0">
+            <Link href="/" className="flex items-center gap-2 group shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition shrink-0">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="min-w-0">
-                <span className="text-base sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-amber-800 to-amber-600 bg-clip-text text-transparent truncate block">
+              <div className="shrink-0">
+                <span className="text-sm xs:text-base sm:text-xl font-black tracking-tight bg-gradient-to-r from-brand-600 via-amber-800 to-amber-600 bg-clip-text text-transparent whitespace-nowrap block">
                   UTSAV VENUES
                 </span>
                 <span className="hidden sm:block text-[10px] font-semibold tracking-widest text-amber-700/80 uppercase">
@@ -293,17 +294,17 @@ export default function Navbar() {
           </div>
 
           {/* Right Action Bar */}
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
             {/* Quick Demo Role Switcher (Visible on desktop/tablet, shifted to mobile menu drawer on mobile) */}
             <div className="hidden sm:block">
               <DemoAccountSwitcher currentUser={user} />
             </div>
 
-            {/* Favorites Icon (Only for Customers or Visitors) */}
+            {/* Favorites Icon (Hidden on small mobile to give plenty of room to logo & account; accessible in drawer & account menu) */}
             {(!user || isCustomer) && (
               <Link
                 href="/favorites"
-                className="p-2 text-gray-600 hover:text-rose-600 hover:bg-rose-50 rounded-full transition min-w-[36px] min-h-[36px] flex items-center justify-center"
+                className="hidden sm:flex p-2 text-gray-600 hover:text-rose-600 hover:bg-rose-50 rounded-full transition min-w-[36px] min-h-[36px] items-center justify-center"
                 title="Saved Venues"
                 aria-label="Saved Venues"
               >
@@ -318,17 +319,23 @@ export default function Navbar() {
             {user ? (
               <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setUserMenuOpen((prev) => !prev);
+                    setMobileMenuOpen(false);
+                  }}
                   aria-label="User account menu"
                   aria-expanded={userMenuOpen}
-                  className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 pr-2 sm:pr-3 py-1 rounded-full border border-gray-200 hover:border-amber-400 bg-gray-50 hover:bg-white transition text-xs font-semibold text-gray-800 min-h-[36px]"
+                  className="flex items-center gap-1.5 sm:gap-2 p-1 sm:pl-2 sm:pr-3 sm:py-1 rounded-full border border-stone-200 hover:border-amber-400 bg-stone-50 hover:bg-white transition text-xs font-semibold text-stone-800 min-h-[36px]"
                 >
-                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
                     {user.fullName?.[0]?.toUpperCase() || 'U'}
                   </div>
-                  <span className="hidden sm:inline max-w-[90px] truncate">{user.fullName}</span>
+                  <span className="hidden md:inline max-w-[90px] truncate">{user.fullName}</span>
                   <span
-                    className={`text-[9px] px-1 sm:px-1.5 py-0.5 rounded uppercase font-bold ${
+                    className={`hidden sm:inline-block text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${
                       isAdmin
                         ? 'bg-purple-100 text-purple-800'
                         : isManager
@@ -341,89 +348,111 @@ export default function Navbar() {
                 </button>
 
                 {userMenuOpen && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-60 bg-white border border-stone-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-xs"
-                  >
-                    <div className="px-4 py-2.5 border-b border-stone-100">
-                      <p className="font-extrabold text-stone-900 truncate">{user.fullName}</p>
-                      <p className="text-[11px] text-stone-500 truncate">{user.email}</p>
-                    </div>
+                  <>
+                    {/* Mobile Backdrop for User Menu */}
+                    <div
+                      className="fixed inset-0 top-16 bg-stone-900/40 backdrop-blur-xs z-40 sm:hidden animate-in fade-in duration-150"
+                      onClick={() => setUserMenuOpen(false)}
+                      aria-hidden="true"
+                    />
 
-                    <div className="py-1">
-                      {isCustomer && (
-                        <>
-                          <Link
-                            href="/bookings"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
-                          >
-                            <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
-                            <span>My Bookings</span>
-                          </Link>
-                          <Link
-                            href="/favorites"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
-                          >
-                            <Heart className="w-4 h-4 text-rose-500 shrink-0" />
-                            <span>Saved Venues</span>
-                          </Link>
-                        </>
-                      )}
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="fixed sm:absolute top-16 sm:top-full left-3 right-3 sm:left-auto sm:right-0 sm:mt-2 w-auto sm:w-60 bg-white border border-stone-200 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-xs"
+                    >
+                      <div className="px-4 py-2.5 border-b border-stone-100 flex items-center justify-between">
+                        <div className="min-w-0 pr-2">
+                          <p className="font-extrabold text-stone-900 truncate">{user.fullName}</p>
+                          <p className="text-[11px] text-stone-500 truncate">{user.email}</p>
+                        </div>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold shrink-0 ${
+                            isAdmin
+                              ? 'bg-purple-100 text-purple-800'
+                              : isManager
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
+                          {isAdmin ? user.adminProfile?.adminRole || 'ADMIN' : user.role}
+                        </span>
+                      </div>
 
-                      {isManager && (
-                        <>
-                          <Link
-                            href="/manager"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
-                          >
-                            <Building2 className="w-4 h-4 text-amber-600 shrink-0" />
-                            <span>Manager Dashboard</span>
-                          </Link>
-                          <Link
-                            href="/manager/profile"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
-                          >
-                            <User className="w-4 h-4 text-stone-600 shrink-0" />
-                            <span>Business Profile</span>
-                          </Link>
-                        </>
-                      )}
+                      <div className="py-1">
+                        {isCustomer && (
+                          <>
+                            <Link
+                              href="/bookings"
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                            >
+                              <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span>My Bookings</span>
+                            </Link>
+                            <Link
+                              href="/favorites"
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                            >
+                              <Heart className="w-4 h-4 text-rose-500 shrink-0" />
+                              <span>Saved Venues</span>
+                            </Link>
+                          </>
+                        )}
 
-                      {isAdmin && (
+                        {isManager && (
+                          <>
+                            <Link
+                              href="/manager"
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                            >
+                              <Building2 className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span>Manager Dashboard</span>
+                            </Link>
+                            <Link
+                              href="/manager/profile"
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                            >
+                              <User className="w-4 h-4 text-stone-600 shrink-0" />
+                              <span>Business Profile</span>
+                            </Link>
+                          </>
+                        )}
+
+                        {isAdmin && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
+                          >
+                            <Shield className="w-4 h-4 text-purple-600 shrink-0" />
+                            <span>Admin Console</span>
+                          </Link>
+                        )}
+
                         <Link
-                          href="/admin"
+                          href="/profile"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
                         >
-                          <Shield className="w-4 h-4 text-purple-600 shrink-0" />
-                          <span>Admin Console</span>
+                          <User className="w-4 h-4 text-stone-500 shrink-0" />
+                          <span>Account Settings</span>
                         </Link>
-                      )}
+                      </div>
 
-                      <Link
-                        href="/profile"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-stone-50 text-stone-700 font-medium transition min-h-[40px]"
-                      >
-                        <User className="w-4 h-4 text-stone-500 shrink-0" />
-                        <span>Account Settings</span>
-                      </Link>
+                      <div className="border-t border-stone-100 pt-1">
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-rose-600 hover:bg-rose-50 font-bold transition min-h-[40px]"
+                        >
+                          <LogOut className="w-4 h-4 shrink-0" />
+                          <span>Sign out</span>
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="border-t border-stone-100 pt-1">
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-rose-600 hover:bg-rose-50 font-bold transition min-h-[40px]"
-                      >
-                        <LogOut className="w-4 h-4 shrink-0" />
-                        <span>Sign out</span>
-                      </button>
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
             ) : (
@@ -445,12 +474,19 @@ export default function Navbar() {
 
             {/* Mobile menu toggle */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-stone-700 hover:bg-amber-50 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center transition"
+              ref={mobileMenuButtonRef}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMobileMenuOpen((prev) => !prev);
+                setUserMenuOpen(false);
+              }}
+              className="md:hidden p-2 text-stone-700 hover:bg-amber-50 rounded-xl min-w-[40px] min-h-[40px] flex items-center justify-center transition"
               aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
               aria-expanded={mobileMenuOpen}
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="w-6 h-6 text-stone-900" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
@@ -468,8 +504,29 @@ export default function Navbar() {
 
           <div
             ref={mobileMenuRef}
-            className="md:hidden fixed top-16 left-0 right-0 max-h-[calc(100vh-4rem)] overflow-y-auto z-40 bg-white border-b border-stone-200 shadow-2xl px-5 pt-3 pb-6 space-y-2 animate-in slide-in-from-top-2 duration-150"
+            className="md:hidden fixed top-16 left-0 right-0 max-h-[calc(100vh-4rem)] overflow-y-auto z-40 bg-white border-b border-stone-200 shadow-2xl px-5 pt-3 pb-6 space-y-2.5 animate-in slide-in-from-top-2 duration-150"
           >
+            {/* Mobile Drawer Header */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-stone-100 sm:hidden">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center text-white text-xs">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-extrabold text-stone-800 uppercase tracking-wider">
+                  Menu & Account
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg text-xs font-bold flex items-center gap-1 min-h-[36px] px-2.5 bg-stone-50 border border-stone-200/60"
+                aria-label="Close navigation menu"
+              >
+                <X className="w-4 h-4 text-stone-700" />
+                <span>Close</span>
+              </button>
+            </div>
+
             {/* Mobile Quick Demo Role Switcher */}
             <div className="pb-3 border-b border-stone-100 sm:hidden">
               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block mb-1.5 px-1">
