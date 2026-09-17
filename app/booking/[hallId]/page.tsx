@@ -337,9 +337,16 @@ function BookingCheckoutContent() {
       )}
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span className="font-semibold">{error}</span>
+          </div>
+          {error.toLowerCase().includes('razorpay') && (
+            <p className="text-[11px] text-stone-600 pl-6">
+              To test the live gateway, ensure <code className="bg-stone-200 px-1 py-0.5 rounded text-stone-800">RAZORPAY_KEY_ID</code> and <code className="bg-stone-200 px-1 py-0.5 rounded text-stone-800">RAZORPAY_KEY_SECRET</code> are configured in your Vercel Project Settings &gt; Environment Variables. You can also click <strong>Simulate Instant Confirmation</strong> below to complete this booking right now.
+            </p>
+          )}
         </div>
       )}
 

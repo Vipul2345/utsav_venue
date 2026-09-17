@@ -155,11 +155,8 @@ export async function createBookingWithLock(input: CreateBookingInput) {
 
     // 5. Generate Booking Number
     const bookingCount = await tx.booking.count();
-    let bookingNumber = `BK-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}`;
-    const existingBooking = await tx.booking.findUnique({ where: { bookingNumber } });
-    if (existingBooking) {
-      bookingNumber = `BK-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
-    }
+    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const bookingNumber = `BK-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}-${randomHex}`;
 
     // 6. Set temporary payment hold expiration
     const holdExpiresAt = new Date(Date.now() + HOLD_DURATION_MINUTES * 60 * 1000);
@@ -250,11 +247,8 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
     }
 
     const bookingCount = await tx.booking.count();
-    let bookingNumber = `EXT-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}`;
-    const existingBooking = await tx.booking.findUnique({ where: { bookingNumber } });
-    if (existingBooking) {
-      bookingNumber = `EXT-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
-    }
+    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const bookingNumber = `EXT-${new Date().getFullYear()}-${String(bookingCount + 1).padStart(5, '0')}-${randomHex}`;
 
     const booking = await tx.booking.create({
       data: {

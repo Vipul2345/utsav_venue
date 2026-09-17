@@ -16,8 +16,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'bookingId and amount are required' }, { status: 400 });
     }
 
-    // Generate verified transaction reference
-    const providerTransactionId = `txn_${paymentMethod.toLowerCase()}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    // Generate or use verified transaction reference
+    const providerTransactionId =
+      body.providerTransactionId ||
+      `txn_${paymentMethod.toLowerCase()}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
     const confirmedBooking = await confirmBookingPayment({
       bookingId,

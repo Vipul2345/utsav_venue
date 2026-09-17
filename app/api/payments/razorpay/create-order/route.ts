@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { razorpay } from '@/lib/razorpay';
+import { razorpay, RAZORPAY_PUBLIC_KEY } from '@/lib/razorpay';
 
 export async function POST(request: Request) {
   try {
@@ -29,7 +29,10 @@ export async function POST(request: Request) {
     }
 
     if (!razorpay) {
-      return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Razorpay is not configured on this deployment. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your hosting environment variables.' },
+        { status: 500 }
+      );
     }
 
     // Razorpay amount in paise (1 INR = 100 paise)
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
+      keyId: RAZORPAY_PUBLIC_KEY,
       bookingNumber: booking.bookingNumber,
       customerName: booking.customer?.fullName || 'Valued Guest',
       customerEmail: booking.customer?.email || '',

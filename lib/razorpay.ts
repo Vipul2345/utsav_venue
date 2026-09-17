@@ -9,3 +9,6 @@ export const razorpay = key_id && key_secret
       key_secret,
     })
   : null;
+
+export const RAZORPAY_PUBLIC_KEY = key_id;
+

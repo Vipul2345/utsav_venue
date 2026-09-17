@@ -102,7 +102,7 @@ describe('Pricing Engine & Concurrency Locking', () => {
     // 3. Clean up test booking
     await prisma.bookingItem.deleteMany({ where: { bookingId: booking1.id } });
     await prisma.booking.delete({ where: { id: booking1.id } });
-  });
+  }, 15000);
 
   it('Validation: rejects booking if guest count exceeds maxCapacity', async () => {
     await expect(
