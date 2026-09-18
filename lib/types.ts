@@ -62,6 +62,12 @@ export interface PricingBreakdown {
   addonsList: Array<{ name: string; price: number; quantity: number; total: number }>;
   addonsTotal: number;
   cleaningFee: number;
+  packageId?: string | null;
+  packageName?: string | null;
+  packagePrice?: number;
+  bulkDiscountTier?: string | null;
+  bulkDiscountPercent?: number;
+  bulkDiscountAmount?: number;
   subtotal: number;
   taxRatePercent: number;
   taxesAmount: number;
@@ -70,3 +76,4 @@ export interface PricingBreakdown {
   platformCommissionAmount: number;
   managerPayoutAmount: number;
 }
+

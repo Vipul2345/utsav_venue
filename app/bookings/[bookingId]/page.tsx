@@ -18,6 +18,12 @@ import {
   Mail,
   ArrowLeft,
   Star,
+  Send,
+  Upload,
+  FileCheck,
+  Lock,
+  RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
 import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
@@ -35,6 +41,7 @@ export default function BookingDetailsPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+
   // Review submission state
   const [rating, setRating] = useState(5);
   const [reviewTitle, setReviewTitle] = useState('');
@@ -42,6 +49,25 @@ export default function BookingDetailsPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewSuccess, setReviewSuccess] = useState(false);
+
+  // Digital Invitations State
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [loadingInvitations, setLoadingInvitations] = useState(false);
+  const [recipientEmails, setRecipientEmails] = useState('');
+  const [invitationMessage, setInvitationMessage] = useState('');
+  const [sendingInvitations, setSendingInvitations] = useState(false);
+  const [invitationStatus, setInvitationStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Identity Documents (KYC) State
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [docMemberName, setDocMemberName] = useState('');
+  const [docMemberRole, setDocMemberRole] = useState('Primary Host');
+  const [docType, setDocType] = useState('Aadhaar Card');
+  const [docFileUrl, setDocFileUrl] = useState('');
+  const [submittingDoc, setSubmittingDoc] = useState(false);
+  const [docStatus, setDocStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const cancelModalRef = useRef<HTMLDivElement>(null);
 
   useModalDismiss(cancelModalRef, () => setShowCancelModal(false), showCancelModal);
@@ -57,6 +83,101 @@ export default function BookingDetailsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInvitations = async () => {
+    try {
+      setLoadingInvitations(true);
+      const res = await fetch(`/api/bookings/${bookingId}/invitations`);
+      if (res.ok) {
+        const data = await res.json();
+        setInvitations(data.invitations || []);
+      }
+    } catch {
+      // non-blocking
+    } finally {
+      setLoadingInvitations(false);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    try {
+      setLoadingDocuments(true);
+      const res = await fetch(`/api/bookings/${bookingId}/documents`);
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments(data.documents || []);
+      }
+    } catch {
+      // non-blocking
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (booking?.status === 'CONFIRMED' || booking?.status === 'COMPLETED') {
+      fetchInvitations();
+      fetchDocuments();
+    }
+  }, [booking?.status, bookingId]);
+
+  const handleSendInvitations = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recipientEmails.trim()) return;
+    setSendingInvitations(true);
+    setInvitationStatus(null);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/invitations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: recipientEmails,
+          customMessage: invitationMessage,
+          eventTitle: `${booking.occasion?.name || 'Event Celebration'} at ${booking.hall.name}`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to dispatch invitations');
+      setInvitationStatus({ type: 'success', message: `Dispatched ${data.count} digital invitation(s) successfully.` });
+      setRecipientEmails('');
+      setInvitationMessage('');
+      await fetchInvitations();
+    } catch (err: any) {
+      setInvitationStatus({ type: 'error', message: err.message });
+    } finally {
+      setSendingInvitations(false);
+    }
+  };
+
+  const handleUploadDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docMemberName.trim() || !docFileUrl.trim()) return;
+    setSubmittingDoc(true);
+    setDocStatus(null);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberName: docMemberName.trim(),
+          memberRole: docMemberRole,
+          documentType: docType,
+          fileUrl: docFileUrl.trim(),
+          fileName: `${docMemberName.trim().replace(/\s+/g, '_')}_${docType.replace(/\s+/g, '_')}.pdf`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit document');
+      setDocStatus({ type: 'success', message: 'Identity document securely uploaded for compliance verification.' });
+      setDocMemberName('');
+      setDocFileUrl('');
+      await fetchDocuments();
+    } catch (err: any) {
+      setDocStatus({ type: 'error', message: err.message });
+    } finally {
+      setSubmittingDoc(false);
     }
   };
 
@@ -224,8 +345,8 @@ export default function BookingDetailsPage() {
               <span>{booking.hall.address}, {booking.hall.city?.name}</span>
             </p>
             <p className="text-stone-500 flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-stone-400" />
-              <span>Manager Contact: {booking.hall.contactPhone}</span>
+              <Phone className="w-3.5 h-3.5 text-amber-600" />
+              <span>Utsav Concierge Support: 1800-UTSAV-CARE (24/7 Dedicated Care)</span>
             </p>
           </div>
 
@@ -273,6 +394,12 @@ export default function BookingDetailsPage() {
                 <span className="text-stone-600">Base Venue Rental</span>
                 <span className="font-semibold">₹{booking.baseRentalAmount.toLocaleString('en-IN')}</span>
               </div>
+              {booking.packagePrice > 0 && (
+                <div className="p-3 flex justify-between text-purple-700">
+                  <span className="font-medium">Event Package ({booking.packageName || 'Curated Bundle'})</span>
+                  <span className="font-semibold">₹{booking.packagePrice.toLocaleString('en-IN')}</span>
+                </div>
+              )}
               {booking.cateringAmount > 0 && (
                 <div className="p-3 flex justify-between">
                   <span className="text-stone-600">Gourmet Catering Package</span>
@@ -285,6 +412,12 @@ export default function BookingDetailsPage() {
                   <span className="font-semibold">₹{item.total.toLocaleString('en-IN')}</span>
                 </div>
               ))}
+              {booking.bulkDiscountAmount > 0 && (
+                <div className="p-3 flex justify-between text-emerald-700 bg-emerald-50/60 font-medium">
+                  <span>Bulk Guest Discount ({booking.bulkDiscountTier || ''})</span>
+                  <span className="font-semibold">-₹{booking.bulkDiscountAmount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
               <div className="p-3 flex justify-between">
                 <span className="text-stone-600">Goods & Services Tax (GST 18%)</span>
                 <span className="font-semibold">₹{booking.taxesAmount.toLocaleString('en-IN')}</span>
@@ -437,6 +570,267 @@ export default function BookingDetailsPage() {
           <p>Venue rules and safety norms apply as per management policy.</p>
         </div>
       </div>
+
+      {/* Host Feature 1: Digital Event Invitations (Visible on confirmed/completed bookings) */}
+      {(booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') && !booking.cancelledAt && (
+        <div className="bg-white border border-stone-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 print:hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+            <div>
+              <h3 className="text-base font-extrabold text-stone-900 flex items-center gap-2">
+                <Mail className="w-5 h-5 text-amber-600" />
+                <span>Digital Guest Invitations</span>
+              </h3>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Send official invitations with Google Maps location and event schedule directly to your guests.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full self-start sm:self-auto border border-amber-200">
+              {invitations.length} Sent
+            </span>
+          </div>
+
+          {invitationStatus && (
+            <div
+              className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                invitationStatus.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}
+            >
+              {invitationStatus.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              )}
+              <span>{invitationStatus.message}</span>
+            </div>
+          )}
+
+          {/* Invitation Dispatch Form */}
+          <form onSubmit={handleSendInvitations} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-semibold text-stone-700 mb-1">
+                Guest Email Addresses * (Comma or newline separated, up to 25 per batch)
+              </label>
+              <textarea
+                required
+                rows={3}
+                value={recipientEmails}
+                onChange={(e) => setRecipientEmails(e.target.value)}
+                placeholder="e.g. friend1@gmail.com, family.member@outlook.com"
+                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-stone-700 mb-1">
+                Custom Invitation Note (Optional)
+              </label>
+              <input
+                type="text"
+                value={invitationMessage}
+                onChange={(e) => setInvitationMessage(e.target.value)}
+                placeholder="e.g. We would be delighted to have you celebrate this special day with us!"
+                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={sendingInvitations || !recipientEmails.trim()}
+              className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[42px]"
+            >
+              <Send className="w-4 h-4" />
+              <span>{sendingInvitations ? 'Dispatching Invitations...' : 'Send Branded Email Invitations'}</span>
+            </button>
+          </form>
+
+          {/* Sent History */}
+          {invitations.length > 0 && (
+            <div className="pt-4 border-t border-stone-100 space-y-2 text-xs">
+              <h4 className="font-bold text-stone-700 text-xs">Recent Invitations Dispatched</h4>
+              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                {invitations.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between p-2.5 bg-stone-50 border border-stone-100 rounded-xl text-xs"
+                  >
+                    <span className="font-medium text-stone-800">{inv.recipientEmail}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-stone-400">
+                        {new Date(inv.sentAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full">
+                        {inv.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Host Feature 2: Identity Document Collection (KYC) (Visible on confirmed/completed bookings) */}
+      {(booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') && !booking.cancelledAt && (
+        <div className="bg-white border border-stone-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 print:hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+            <div>
+              <h3 className="text-base font-extrabold text-stone-900 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <span>Guest & Attendee Identity Verification</span>
+              </h3>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Hospitality compliance requires government photo ID registration for primary event attendees (up to 5 members).
+              </p>
+            </div>
+            <span className="text-xs font-bold text-stone-700 bg-stone-100 px-3 py-1 rounded-full self-start sm:self-auto">
+              {documents.length} / 5 Registered
+            </span>
+          </div>
+
+          {/* Privacy Notice Banner */}
+          <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs text-stone-700">
+            <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <p className="leading-relaxed text-[11px]">
+              <strong className="font-semibold text-stone-900">Confidential Vault:</strong> Uploaded identity documents are encrypted and accessible strictly to verified Utsav Compliance Officers. <strong>Venue managers never have access</strong> to your personal identity proofs.
+            </p>
+          </div>
+
+          {docStatus && (
+            <div
+              className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                docStatus.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}
+            >
+              {docStatus.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              )}
+              <span>{docStatus.message}</span>
+            </div>
+          )}
+
+          {/* Submitted Documents Cards */}
+          {documents.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-bold text-stone-800 text-xs">Registered Attendees</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1.5 text-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-stone-900">{doc.memberName}</span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          doc.status === 'VERIFIED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : doc.status === 'REJECTED'
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {doc.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-stone-500">
+                      <span>{doc.memberRole} • {doc.documentType}</span>
+                      {doc.fileUrl && (
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-amber-700 hover:underline flex items-center gap-1 font-semibold"
+                        >
+                          <span>View Proof</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Submission Form (If < 5) */}
+          {documents.length < 5 && (
+            <form onSubmit={handleUploadDocument} className="pt-2 border-t border-stone-100 space-y-3.5 text-xs">
+              <h4 className="font-bold text-stone-800 text-xs">Add Attendee Identity Proof</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Attendee Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={docMemberName}
+                    onChange={(e) => setDocMemberName(e.target.value)}
+                    placeholder="e.g. Ramesh Kumar"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Role / Relation</label>
+                  <select
+                    value={docMemberRole}
+                    onChange={(e) => setDocMemberRole(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="Primary Host">Primary Host</option>
+                    <option value="Groom">Groom</option>
+                    <option value="Bride">Bride</option>
+                    <option value="Immediate Family">Immediate Family</option>
+                    <option value="Event Coordinator">Event Coordinator</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Document Type</label>
+                  <select
+                    value={docType}
+                    onChange={(e) => setDocType(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="Aadhaar Card">Aadhaar Card</option>
+                    <option value="Passport">Passport</option>
+                    <option value="Voter ID">Voter ID</option>
+                    <option value="Driving License">Driving License</option>
+                    <option value="PAN Card">PAN Card</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Document File URL / Key *</label>
+                  <input
+                    type="url"
+                    required
+                    value={docFileUrl}
+                    onChange={(e) => setDocFileUrl(e.target.value)}
+                    placeholder="https://... or cloud storage document link"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submittingDoc || !docMemberName.trim() || !docFileUrl.trim()}
+                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[42px]"
+              >
+                <Upload className="w-4 h-4" />
+                <span>{submittingDoc ? 'Uploading...' : 'Submit ID for Verification'}</span>
+              </button>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* Cancellation Modal */}
       {showCancelModal && (

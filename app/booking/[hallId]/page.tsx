@@ -37,6 +37,7 @@ function BookingCheckoutContent() {
   const guestCount = parseInt(searchParams.get('guests') || '300', 10);
   const cateringType = (searchParams.get('catering') || 'NONE') as 'NONE' | 'VEG' | 'NON_VEG';
   const selectedAddonIds = searchParams.get('addons')?.split(',').filter(Boolean) || [];
+  const packageId = searchParams.get('packageId') || '';
 
   const [hall, setHall] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -102,6 +103,7 @@ function BookingCheckoutContent() {
           guestCount,
           cateringType,
           selectedAddonIds,
+          packageId: packageId || undefined,
         }),
       });
 
@@ -499,6 +501,13 @@ function BookingCheckoutContent() {
                 <span>₹{(createdBooking?.baseRentalAmount || 0).toLocaleString('en-IN')}</span>
               </div>
 
+              {createdBooking?.packagePrice > 0 && (
+                <div className="flex justify-between text-purple-700 font-medium">
+                  <span>Package: {createdBooking.packageName || 'Curated Bundle'}</span>
+                  <span>+₹{(createdBooking?.packagePrice || 0).toLocaleString('en-IN')}</span>
+                </div>
+              )}
+
               {createdBooking?.cateringAmount > 0 && (
                 <div className="flex justify-between text-stone-600">
                   <span>Catering Charges</span>
@@ -510,6 +519,13 @@ function BookingCheckoutContent() {
                 <div className="flex justify-between text-stone-600">
                   <span>Add-Ons & Extras</span>
                   <span>₹{(createdBooking?.addonsAmount || 0).toLocaleString('en-IN')}</span>
+                </div>
+              )}
+
+              {createdBooking?.bulkDiscountAmount > 0 && (
+                <div className="flex justify-between text-emerald-700 font-semibold bg-emerald-50/60 px-1.5 py-0.5 rounded">
+                  <span>Bulk Guest Discount ({createdBooking.bulkDiscountTier || ''})</span>
+                  <span>-₹{(createdBooking?.bulkDiscountAmount || 0).toLocaleString('en-IN')}</span>
                 </div>
               )}
 

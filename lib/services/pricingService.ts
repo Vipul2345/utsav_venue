@@ -11,6 +11,7 @@ export interface CalculatePriceInput {
   guestCount: number;
   cateringType: CateringType;
   selectedAddonIds?: string[];
+  packageId?: string;
 }
 
 export interface PricingCalculationOptions {
@@ -28,6 +29,15 @@ export interface PricingCalculationOptions {
   addonsList?: { name: string; price: number; quantity: number; total: number }[];
   addonsTotal?: number;
   platformCommissionPercent?: number;
+  packageId?: string | null;
+  packageName?: string | null;
+  packagePrice?: number;
+  tier1MinGuests?: number | null;
+  tier1DiscountPercent?: number | null;
+  tier2MinGuests?: number | null;
+  tier2DiscountPercent?: number | null;
+  tier3MinGuests?: number | null;
+  tier3DiscountPercent?: number | null;
 }
 
 /**
@@ -98,7 +108,38 @@ export function calculatePricingBreakdown(options: PricingCalculationOptions): P
   }
   const cateringTotal = perPlateRate * guestCount;
 
-  const subtotal = baseRental + weekendSurcharge + cateringTotal + addonsTotal + cleaningFee;
+  const pkgPrice = options.packagePrice || 0;
+
+  // Tiered bulk volume discount calculation
+  const t1Min = options.tier1MinGuests ?? 100;
+  const t1Pct = options.tier1DiscountPercent ?? 0;
+  const t2Min = options.tier2MinGuests ?? 200;
+  const t2Pct = options.tier2DiscountPercent ?? 0;
+  const t3Min = options.tier3MinGuests ?? 300;
+  const t3Pct = options.tier3DiscountPercent ?? 0;
+
+  let bulkDiscountPercent = 0;
+  let bulkDiscountTier: string | null = null;
+  if (guestCount >= t3Min && t3Pct > 0) {
+    bulkDiscountPercent = t3Pct;
+    bulkDiscountTier = `Grand Gathering (${t3Min}+ Guests: ${t3Pct}% Off)`;
+  } else if (guestCount >= t2Min && t2Pct > 0) {
+    bulkDiscountPercent = t2Pct;
+    bulkDiscountTier = `Celebration (${t2Min}+ Guests: ${t2Pct}% Off)`;
+  } else if (guestCount >= t1Min && t1Pct > 0) {
+    bulkDiscountPercent = t1Pct;
+    bulkDiscountTier = `Group Tier (${t1Min}+ Guests: ${t1Pct}% Off)`;
+  }
+
+  const preDiscountSubtotal = baseRental + weekendSurcharge + cateringTotal + addonsTotal + pkgPrice + cleaningFee;
+  const discountableBase = baseRental + weekendSurcharge;
+  let bulkDiscountAmount = 0;
+  if (bulkDiscountPercent > 0 && discountableBase > 0) {
+    bulkDiscountAmount = Math.round(discountableBase * (bulkDiscountPercent / 100));
+    bulkDiscountAmount = Math.min(bulkDiscountAmount, preDiscountSubtotal);
+  }
+
+  const subtotal = Math.max(0, preDiscountSubtotal - bulkDiscountAmount);
   const taxesAmount = Math.round(subtotal * (taxRatePercent / 100));
   const totalAmount = subtotal + taxesAmount;
 
@@ -121,6 +162,12 @@ export function calculatePricingBreakdown(options: PricingCalculationOptions): P
     addonsList,
     addonsTotal,
     cleaningFee,
+    packageId: options.packageId || null,
+    packageName: options.packageName || null,
+    packagePrice: pkgPrice,
+    bulkDiscountTier,
+    bulkDiscountPercent,
+    bulkDiscountAmount,
     subtotal,
     taxRatePercent,
     taxesAmount,
@@ -142,6 +189,7 @@ export async function calculateHallPrice(input: CalculatePriceInput): Promise<Pr
     guestCount,
     cateringType,
     selectedAddonIds = [],
+    packageId,
   } = input;
 
   const startStr = startDate || eventDate || '';
@@ -152,6 +200,9 @@ export async function calculateHallPrice(input: CalculatePriceInput): Promise<Pr
     include: {
       pricingRule: true,
       addons: true,
+      packages: {
+        where: { isActive: true },
+      },
     },
   });
 
@@ -167,7 +218,18 @@ export async function calculateHallPrice(input: CalculatePriceInput): Promise<Pr
     taxRatePercent: 18.0,
     perPlateVegPrice: 650,
     perPlateNonVegPrice: 850,
+    tier1MinGuests: 100,
+    tier1DiscountPercent: 5.0,
+    tier2MinGuests: 200,
+    tier2DiscountPercent: 8.0,
+    tier3MinGuests: 300,
+    tier3DiscountPercent: 12.0,
   };
+
+  let selectedPackage: any = null;
+  if (packageId) {
+    selectedPackage = hall.packages.find((p) => p.id === packageId) || null;
+  }
 
   // Addons calculation
   let durationHours = 4;
@@ -217,5 +279,14 @@ export async function calculateHallPrice(input: CalculatePriceInput): Promise<Pr
     perPlateNonVegPrice: rule.perPlateNonVegPrice,
     addonsList,
     addonsTotal,
+    packageId: selectedPackage?.id || null,
+    packageName: selectedPackage?.name || null,
+    packagePrice: selectedPackage?.price || 0,
+    tier1MinGuests: rule.tier1MinGuests,
+    tier1DiscountPercent: rule.tier1DiscountPercent,
+    tier2MinGuests: rule.tier2MinGuests,
+    tier2DiscountPercent: rule.tier2DiscountPercent,
+    tier3MinGuests: rule.tier3MinGuests,
+    tier3DiscountPercent: rule.tier3DiscountPercent,
   });
 }

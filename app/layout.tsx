@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import SupportChatbot from '@/components/SupportChatbot';
 
 export const metadata: Metadata = {
   title: 'UTSAV VENUES | Banquet Halls & Event Venue Booking Platform',
@@ -23,6 +24,7 @@ export default function RootLayout({
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
+        <SupportChatbot />
       </body>
     </html>
   );

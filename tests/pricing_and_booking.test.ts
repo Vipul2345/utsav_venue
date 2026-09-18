@@ -43,13 +43,14 @@ describe('Pricing Engine & Concurrency Locking', () => {
     expect(result.baseRental).toBe(testHall.pricingRule.baseRentalPrice);
     expect(result.perPlateRate).toBe(testHall.pricingRule.perPlateVegPrice); // 850
     expect(result.cateringTotal).toBe(300 * 850); // 255000
-    // Subtotal = 125000 + 255000 + 5000 (cleaning) = 385000
-    expect(result.subtotal).toBe(385000);
-    // Taxes (18%) = 385000 * 0.18 = 69300
-    expect(result.taxesAmount).toBe(69300);
-    expect(result.totalAmount).toBe(454300);
-    // Platform commission (10%) = 385000 * 0.10 = 38500
-    expect(result.platformCommissionAmount).toBe(38500);
+    // Subtotal = 125000 - 15000 (12% bulk discount on base rental for 300 guests) + 255000 + 5000 (cleaning) = 370000
+    expect(result.bulkDiscountAmount).toBe(15000);
+    expect(result.subtotal).toBe(370000);
+    // Taxes (18%) = 370000 * 0.18 = 66600
+    expect(result.taxesAmount).toBe(66600);
+    expect(result.totalAmount).toBe(436600);
+    // Platform commission (10%) = 370000 * 0.10 = 37000
+    expect(result.platformCommissionAmount).toBe(37000);
   });
 
   it('Pricing: applies weekendMultiplier for Saturday/Sunday', async () => {

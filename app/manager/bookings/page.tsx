@@ -48,7 +48,7 @@ export default function ManagerBookingsPage() {
         </div>
 
         <Link
-          href="/manager/calendar"
+          href="/manager/bookings/offline"
           className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow transition"
         >
           + Record Offline Booking

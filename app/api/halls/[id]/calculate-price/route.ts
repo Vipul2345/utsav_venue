@@ -18,6 +18,7 @@ export async function POST(
       guestCount,
       cateringType = 'NONE',
       selectedAddonIds = [],
+      packageId,
     } = body;
 
     const start = startDate || eventDate;
@@ -46,6 +47,7 @@ export async function POST(
       guestCount: parseInt(guestCount, 10),
       cateringType,
       selectedAddonIds,
+      packageId,
     });
 
     return NextResponse.json({ pricing });

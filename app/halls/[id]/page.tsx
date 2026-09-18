@@ -25,6 +25,10 @@ import {
   ArrowRight,
   Info,
   Check,
+  Play,
+  X,
+  Video,
+  Layers,
 } from 'lucide-react';
 
 const VenueMap = dynamic(() => import('@/components/VenueMap'), {
@@ -56,6 +60,9 @@ export default function HallDetailsPage() {
   const [guestCount, setGuestCount] = useState<number>(300);
   const [cateringType, setCateringType] = useState<'NONE' | 'VEG' | 'NON_VEG'>('VEG');
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
+  const [pastEventCategory, setPastEventCategory] = useState<string>('ALL');
+  const [activeVideoModal, setActiveVideoModal] = useState<string | null>(null);
 
   // Calculated Pricing Breakdown
   const [pricingBreakdown, setPricingBreakdown] = useState<any>(null);
@@ -219,6 +226,7 @@ export default function HallDetailsPage() {
             guestCount,
             cateringType,
             selectedAddonIds,
+            packageId: selectedPackageId || undefined,
           }),
         });
         if (priceRes.ok && !isCancelled) {
@@ -249,7 +257,7 @@ export default function HallDetailsPage() {
     return () => {
       isCancelled = true;
     };
-  }, [hall, startDate, endDate, startTime, endTime, guestCount, cateringType, selectedAddonIds]);
+  }, [hall, startDate, endDate, startTime, endTime, guestCount, cateringType, selectedAddonIds, selectedPackageId]);
 
   const toggleAddon = (addonId: string) => {
     setSelectedAddonIds((prev) =>
@@ -271,6 +279,7 @@ export default function HallDetailsPage() {
       guests: guestCount.toString(),
       catering: cateringType,
       addons: selectedAddonIds.join(','),
+      ...(selectedPackageId ? { packageId: selectedPackageId } : {}),
     });
 
     router.push(`/booking/${hall.id}?${params.toString()}`);
@@ -517,6 +526,200 @@ export default function HallDetailsPage() {
               </div>
             </div>
           </div>
+
+          {/* Feature 3: Curated Event Packages & Bundles */}
+          {hall.packages && hall.packages.length > 0 && (
+            <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-extrabold uppercase tracking-wider mb-1">
+                    <Layers className="w-3 h-3 text-amber-700" />
+                    <span>Bundled Value</span>
+                  </div>
+                  <h2 className="text-base font-bold text-stone-900">Curated Event Packages</h2>
+                  <p className="text-xs text-stone-500">
+                    Select an all-inclusive bundle or book standard venue rental with optional add-ons.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {hall.packages.map((pkg: any) => {
+                  const isSelected = selectedPackageId === pkg.id;
+                  let parsedServices: string[] = [];
+                  if (pkg.includedServices) {
+                    try {
+                      parsedServices = JSON.parse(pkg.includedServices);
+                    } catch {
+                      parsedServices = String(pkg.includedServices).split(',').map((s: string) => s.trim()).filter(Boolean);
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={pkg.id}
+                      className={`p-5 rounded-2xl border transition-all duration-200 flex flex-col justify-between space-y-4 ${
+                        isSelected
+                          ? 'border-amber-600 bg-amber-50/50 shadow-md ring-2 ring-amber-500/20'
+                          : 'border-stone-200 bg-stone-50/50 hover:border-amber-300'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-extrabold text-sm text-stone-900">{pkg.name}</h3>
+                          <span className="font-black text-amber-800 text-sm">
+                            +₹{pkg.price.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        {pkg.description && (
+                          <p className="text-xs text-stone-600 mb-3">{pkg.description}</p>
+                        )}
+
+                        {parsedServices.length > 0 && (
+                          <div className="space-y-1.5 pt-2 border-t border-stone-200/60">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Included Services:</span>
+                            <ul className="grid grid-cols-1 gap-1 text-xs text-stone-700">
+                              {parsedServices.map((svc: string, idx: number) => (
+                                <li key={idx} className="flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  <span>{svc}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPackageId(isSelected ? '' : pkg.id)}
+                        className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs transition cursor-pointer min-h-[40px] flex items-center justify-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-amber-600 text-white shadow'
+                            : 'bg-white border border-stone-200 hover:bg-amber-50 text-stone-800'
+                        }`}
+                      >
+                        {isSelected ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Package Selected</span>
+                          </>
+                        ) : (
+                          <span>Select This Package</span>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Feature 2: Past Events Showcase Gallery */}
+          {hall.pastEvents && hall.pastEvents.length > 0 && (
+            <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-bold text-stone-900">Past Events Showcase</h2>
+                  <p className="text-xs text-stone-500">
+                    See real celebrations, wedding mandaps, and banquets hosted at this venue.
+                  </p>
+                </div>
+
+                {/* Category Filters */}
+                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                  {['ALL', 'Wedding', 'Reception', 'Corporate', 'Birthday'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setPastEventCategory(cat)}
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap ${
+                        pastEventCategory === cat
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
+                      }`}
+                    >
+                      {cat === 'ALL' ? 'All Events' : cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Media Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {hall.pastEvents
+                  .filter((m: any) => pastEventCategory === 'ALL' || (m.category && m.category.toLowerCase().includes(pastEventCategory.toLowerCase())))
+                  .map((item: any) => (
+                    <div
+                      key={item.id}
+                      className="group relative rounded-xl overflow-hidden border border-stone-200 bg-stone-100 shadow-2xs hover:shadow-md transition aspect-video flex flex-col justify-end"
+                    >
+                      {item.mediaType === 'VIDEO' ? (
+                        <>
+                          <video
+                            src={item.url}
+                            muted
+                            playsInline
+                            preload="none"
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setActiveVideoModal(item.url)}
+                            className="absolute inset-0 flex items-center justify-center bg-stone-950/30 group-hover:bg-stone-950/50 transition cursor-pointer"
+                            aria-label={`Play past event video: ${item.title || 'Event'}`}
+                          >
+                            <div className="w-10 h-10 rounded-full bg-amber-600/90 hover:bg-amber-600 text-white flex items-center justify-center shadow-lg transition-transform group-hover:scale-110">
+                              <Play className="w-4 h-4 fill-white ml-0.5" />
+                            </div>
+                          </button>
+                        </>
+                      ) : (
+                        <img
+                          src={item.url}
+                          alt={item.title || item.caption || 'Past Event'}
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                          loading="lazy"
+                        />
+                      )}
+
+                      {/* Caption Overlay */}
+                      <div className="relative z-10 p-2.5 bg-gradient-to-t from-stone-950/90 via-stone-950/60 to-transparent text-white">
+                        <div className="flex items-center gap-1 text-[9px] font-extrabold uppercase text-amber-300">
+                          {item.mediaType === 'VIDEO' ? <Video className="w-3 h-3" /> : null}
+                          <span>{item.category || 'Celebration'}</span>
+                        </div>
+                        {item.title && <p className="font-bold text-xs truncate mt-0.5">{item.title}</p>}
+                        {item.caption && <p className="text-[10px] text-stone-300 line-clamp-1">{item.caption}</p>}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Past Event Video Modal */}
+          {activeVideoModal && (
+            <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="relative w-full max-w-3xl bg-black rounded-2xl overflow-hidden shadow-2xl">
+                <button
+                  type="button"
+                  onClick={() => setActiveVideoModal(null)}
+                  className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition"
+                  aria-label="Close video player"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <video
+                  src={activeVideoModal}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="w-full max-h-[75vh] object-contain"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Interactive Venue Map */}
           <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-3">
@@ -825,6 +1028,31 @@ export default function HallDetailsPage() {
                 onChange={(e) => setGuestCount(parseInt(e.target.value || '0', 10))}
                 className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:ring-2 focus:ring-amber-500"
               />
+
+              {/* Bulk Volume Discount Tier Callout */}
+              <div className="mt-2 p-2 bg-emerald-50/70 border border-emerald-200 rounded-xl text-[11px]">
+                {guestCount >= 300 ? (
+                  <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Mega Tier Unlocked: 12% Bulk Discount on Base Rental!</span>
+                  </div>
+                ) : guestCount >= 200 ? (
+                  <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Grand Tier Unlocked: 8% Bulk Discount on Base Rental!</span>
+                  </div>
+                ) : guestCount >= 100 ? (
+                  <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Classic Tier Unlocked: 5% Bulk Discount on Base Rental!</span>
+                  </div>
+                ) : (
+                  <div className="text-stone-600 text-[10px] flex items-center gap-1">
+                    <Info className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span>Tiered guest discounts: 100+ (5%), 200+ (8%), 300+ (12% off base rental).</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Catering Selection */}
@@ -959,6 +1187,13 @@ export default function HallDetailsPage() {
                   </div>
                 )}
 
+                {pricingBreakdown.packagePrice > 0 && (
+                  <div className="flex justify-between text-purple-700 font-medium">
+                    <span>Package: {pricingBreakdown.packageName || 'Curated Bundle'}</span>
+                    <span>+₹{pricingBreakdown.packagePrice.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+
                 {pricingBreakdown.cateringTotal > 0 && (
                   <div className="flex justify-between text-stone-600">
                     <span>Catering ({pricingBreakdown.guestCount} guests × ₹{pricingBreakdown.perPlateRate})</span>
@@ -970,6 +1205,15 @@ export default function HallDetailsPage() {
                   <div className="flex justify-between text-stone-600">
                     <span>Selected Add-Ons</span>
                     <span>₹{pricingBreakdown.addonsTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+
+                {pricingBreakdown.bulkDiscountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-semibold bg-emerald-50/60 px-1.5 py-0.5 rounded">
+                    <span>
+                      Bulk Guest Discount ({pricingBreakdown.bulkDiscountTier ? `${pricingBreakdown.bulkDiscountTier} ` : ''}-{pricingBreakdown.bulkDiscountPercent}%)
+                    </span>
+                    <span>-₹{pricingBreakdown.bulkDiscountAmount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
 

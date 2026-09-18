@@ -6,7 +6,7 @@ import { createNotification } from '@/lib/services/notificationService';
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { name, email, phone, subject, message } = body;
+    const { name, email, phone, subject, message, category = 'GENERAL' } = body;
 
     // Validate Required Fields
     const nameVal = validateRequiredString(name, 'Full Name', 2, 100);
@@ -38,17 +38,66 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: messageVal.error }, { status: 400 });
     }
 
-    // Save message to database
+    // Generate unique support ticket number
+    const ticketRandom = Math.floor(10000 + Math.random() * 90000);
+    const ticketNumber = `TKT-${new Date().getFullYear()}-${ticketRandom}`;
+
+    // Save message with category and ticketNumber
     const contactRecord = await prisma.contactMessage.create({
       data: {
         name: name.trim(),
         email: email.toLowerCase().trim(),
         phone: phone ? phone.trim() : null,
+        category: category.toUpperCase().trim(),
+        ticketNumber,
         subject: subject.trim(),
         message: message.trim(),
         status: 'UNREAD',
       },
     });
+
+    // Feature 7: Dispatch automatic non-hallucinating acknowledgement email via Resend
+    let acknowledgementSent = false;
+    try {
+      const { sendContactAcknowledgementEmail } = await import('@/lib/email');
+      const emailResult = await sendContactAcknowledgementEmail({
+        to: email.toLowerCase().trim(),
+        name: name.trim(),
+        ticketNumber,
+        subject: subject.trim(),
+        category,
+      });
+      if (emailResult.success) {
+        acknowledgementSent = true;
+        await prisma.contactMessage.update({
+          where: { id: contactRecord.id },
+          data: {
+            acknowledgementSent: true,
+            acknowledgementSentAt: new Date(),
+          },
+        });
+      }
+    } catch (emailErr) {
+      console.warn('[CONTACT-ACK-WARNING] Failed to dispatch acknowledgement email:', emailErr);
+    }
+
+    // If customer has an active account, create an in-app confirmation notification
+    try {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
+      });
+      if (existingUser) {
+        await createNotification({
+          userId: existingUser.id,
+          title: `Support Ticket Created: ${ticketNumber}`,
+          message: `Your inquiry "${subject.trim()}" has been received. Our concierge support team is reviewing it.`,
+          type: 'SYSTEM',
+          link: '/contact',
+        });
+      }
+    } catch {
+      // Non-blocking
+    }
 
     // Notify Super & Support Admins
     try {
@@ -59,8 +108,8 @@ export async function POST(request: Request) {
       for (const admin of admins) {
         await createNotification({
           userId: admin.id,
-          title: 'New Customer Inquiry',
-          message: `${name.trim()} sent a message: "${subject.trim()}"`,
+          title: `New Support Ticket: ${ticketNumber}`,
+          message: `${name.trim()} submitted inquiry [${category}]: "${subject.trim()}"`,
           type: 'SYSTEM',
           link: '/admin',
         });
@@ -71,7 +120,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Thank you! Your message has been received. Our hospitality team will contact you shortly.',
+      ticketNumber,
+      acknowledgementSent,
+      message: 'Thank you! Your request has been logged and an acknowledgement email has been sent. Our concierge team will assist you shortly.',
       inquiryId: contactRecord.id,
     });
   } catch (error: any) {

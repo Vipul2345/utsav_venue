@@ -18,9 +18,15 @@ export async function GET(
         manager: {
           select: {
             businessName: true,
-            phone: true,
             verificationStatus: true,
           },
+        },
+        pastEvents: {
+          orderBy: { displayOrder: 'asc' },
+        },
+        packages: {
+          where: { isActive: true },
+          orderBy: { price: 'asc' },
         },
         media: {
           where: { verificationStatus: 'APPROVED' },
@@ -57,9 +63,19 @@ export async function GET(
         ? Number((hall.reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1))
         : 4.5;
 
+    // Feature 10: Strict intermediary contact sanitization (never leak manager personal phone/email)
+    const { contactPhone, contactEmail, ...sanitizedHall } = hall;
+
     return NextResponse.json({
       hall: {
-        ...hall,
+        ...sanitizedHall,
+        contactPhone: '1800-UTSAV-CARE',
+        contactEmail: 'support@utsavvenues.com',
+        conciergeSupport: {
+          phone: '1800-UTSAV-CARE',
+          email: 'support@utsavvenues.com',
+          hours: '24/7 Concierge & Booking Care',
+        },
         averageRating: avgRating,
         reviewCount,
       },

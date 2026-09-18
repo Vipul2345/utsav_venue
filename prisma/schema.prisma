@@ -203,6 +203,8 @@ model Hall {
   bookings        Booking[]
   reviews         Review[]
   favorites       Favorite[]
+  pastEvents      PastEventMedia[]
+  packages        VenuePackage[]
 
   @@index([managerId])
   @@index([cityId])
@@ -239,6 +241,12 @@ model PricingRule {
   taxRatePercent       Float    @default(18.0)
   perPlateVegPrice     Float    @default(650)
   perPlateNonVegPrice  Float    @default(850)
+  tier1MinGuests       Int?     @default(100)
+  tier1DiscountPercent Float?   @default(5.0)
+  tier2MinGuests       Int?     @default(200)
+  tier2DiscountPercent Float?   @default(8.0)
+  tier3MinGuests       Int?     @default(300)
+  tier3DiscountPercent Float?   @default(12.0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -305,6 +313,15 @@ model Booking {
   discountAmount         Float     @default(0)
   totalAmount            Float     @default(0)
 
+  packageId              String?
+  packageName            String?
+  packagePrice           Float     @default(0)
+  bulkDiscountTier       String?
+  bulkDiscountAmount     Float     @default(0)
+  bookingType            String    @default("ONLINE") // ONLINE, OFFLINE_MANUAL
+  createdById            String?
+  internalNotes          String?
+
   platformCommissionPercent Float @default(10.0)
   platformCommissionAmount  Float @default(0)
   managerPayoutAmount       Float @default(0)
@@ -317,12 +334,15 @@ model Booking {
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
-  hall     Hall          @relation(fields: [hallId], references: [id], onDelete: Restrict)
-  customer User?         @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: SetNull)
-  occasion Occasion?     @relation(fields: [occasionId], references: [id])
-  items    BookingItem[]
-  payments Payment[]
-  reviews  Review[]
+  hall        Hall              @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  customer    User?             @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: SetNull)
+  occasion    Occasion?         @relation(fields: [occasionId], references: [id])
+  package     VenuePackage?     @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  items       BookingItem[]
+  payments    Payment[]
+  reviews     Review[]
+  documents   BookingDocument[]
+  invitations EventInvitation[]
 
   @@index([hallId, eventDate])
   @@index([hallId, startDate, endDate])
@@ -446,16 +466,21 @@ model EmailOtp {
 }
 
 model ContactMessage {
-  id        String   @id @default(uuid())
-  name      String
-  email     String
-  phone     String?
-  subject   String
-  message   String
-  status    String   @default("UNREAD") // UNREAD, READ, RESOLVED
-  createdAt DateTime @default(now())
+  id                    String    @id @default(uuid())
+  name                  String
+  email                 String
+  phone                 String?
+  category              String    @default("GENERAL") // GENERAL, VENUE, BOOKING, PAYMENT, REFUND, KYC, COMPLAINT
+  ticketNumber          String?   @unique
+  subject               String
+  message               String
+  status                String    @default("UNREAD") // UNREAD, READ, RESOLVED
+  acknowledgementSent   Boolean   @default(false)
+  acknowledgementSentAt DateTime?
+  createdAt             DateTime  @default(now())
 
   @@index([status])
+  @@index([ticketNumber])
   @@index([createdAt])
 }
 
@@ -463,5 +488,79 @@ model SystemSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model PastEventMedia {
+  id           String   @id @default(uuid())
+  hallId       String
+  mediaType    String   @default("IMAGE") // IMAGE, VIDEO
+  url          String
+  thumbnailUrl String?
+  title        String?
+  category     String?  // Wedding, Reception, Corporate, Birthday
+  caption      String?
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  hall Hall @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@index([hallId])
+}
+
+model VenuePackage {
+  id               String    @id @default(uuid())
+  hallId           String
+  name             String    // e.g. Silver, Gold, Platinum, Custom
+  description      String?
+  price            Float     @default(0)
+  includedServices String?   // JSON string or description of included services
+  includedAddons   String?   // JSON array of addon names/IDs
+  minGuests        Int?      @default(50)
+  maxGuests        Int?
+  eventType        String?   @default("ALL")
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  hall     Hall      @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([hallId])
+  @@index([isActive])
+}
+
+model BookingDocument {
+  id              String    @id @default(uuid())
+  bookingId       String
+  memberName      String
+  memberRole      String?   // Primary Host, Co-Host, Guest 1..4
+  documentType    String    // Aadhaar Card, PAN Card, Passport, Voter ID
+  fileUrl         String
+  fileName        String?
+  fileSize        Int?
+  status          String    @default("PENDING") // PENDING, VERIFIED, REJECTED
+  rejectionReason String?
+  verifiedAt      DateTime?
+  verifiedById    String?
+  uploadedAt      DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([status])
+}
+
+model EventInvitation {
+  id             String   @id @default(uuid())
+  bookingId      String
+  recipientEmail String
+  guestName      String?
+  status         String   @default("SENT") // SENT, FAILED
+  sentAt         DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
 }
 

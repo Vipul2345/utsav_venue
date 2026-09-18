@@ -20,6 +20,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+import OccasionVideoCard from '@/components/OccasionVideoCard';
+
 const CITIES = [
   { name: 'Bangalore', slug: 'bangalore', count: '150+ Venues' },
   { name: 'Mumbai', slug: 'mumbai', count: '120+ Venues' },
@@ -29,12 +31,54 @@ const CITIES = [
 ];
 
 const OCCASIONS = [
-  { name: 'Weddings', slug: 'wedding', icon: '💍', desc: 'Grand marriage halls & mandaps' },
-  { name: 'Receptions', slug: 'reception', icon: '🥂', desc: 'Opulent banquets & dining' },
-  { name: 'Engagements', slug: 'engagement', icon: '✨', desc: 'Ring ceremonies & cocktails' },
-  { name: 'Birthdays', slug: 'birthday-party', icon: '🎂', desc: 'Milestone celebrations' },
-  { name: 'Corporate', slug: 'corporate-event', icon: '💼', desc: 'Conferences & galas' },
-  { name: 'Cocktail Parties', slug: 'cocktail-party', icon: '🍸', desc: 'Evening music & celebrations' },
+  {
+    name: 'Weddings',
+    slug: 'wedding',
+    icon: '💍',
+    desc: 'Grand marriage halls & mandaps',
+    posterUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-bride-and-groom-having-their-first-dance-41484-large.mp4',
+  },
+  {
+    name: 'Receptions',
+    slug: 'reception',
+    icon: '🥂',
+    desc: 'Opulent banquets & dining',
+    posterUrl: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=600&q=80',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-hands-holding-champagne-glasses-for-a-toast-41489-large.mp4',
+  },
+  {
+    name: 'Engagements',
+    slug: 'engagement',
+    icon: '✨',
+    desc: 'Ring ceremonies & cocktails',
+    posterUrl: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&q=80',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-young-couple-celebrating-with-champagne-41483-large.mp4',
+  },
+  {
+    name: 'Birthdays',
+    slug: 'birthday-party',
+    icon: '🎂',
+    desc: 'Milestone celebrations',
+    posterUrl: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=600&q=80',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-lit-birthday-candles-on-a-cake-41477-large.mp4',
+  },
+  {
+    name: 'Corporate',
+    slug: 'corporate-event',
+    icon: '💼',
+    desc: 'Conferences & galas',
+    posterUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&q=80',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-business-conference-audience-41479-large.mp4',
+  },
+  {
+    name: 'Cocktail Parties',
+    slug: 'cocktail-party',
+    icon: '🍸',
+    desc: 'Evening music & celebrations',
+    posterUrl: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=600&q=80',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-bartender-pouring-a-cocktail-41478-large.mp4',
+  },
 ];
 
 export default function HomePage() {
@@ -410,21 +454,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {OCCASIONS.map((occ) => (
-            <Link
-              key={occ.slug}
-              href={`/search?occasion=${occ.slug}`}
-              className="p-3 sm:p-4 bg-white border border-stone-200 rounded-2xl hover:border-amber-400 hover:shadow-lg transition group text-center flex flex-col justify-between h-full space-y-2 min-h-[140px]"
-            >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 mx-auto rounded-2xl bg-amber-50 group-hover:bg-amber-100 flex items-center justify-center text-xl sm:text-2xl transition shrink-0">
-                {occ.icon}
-              </div>
-              <div>
-                <h4 className="font-bold text-xs text-stone-900 group-hover:text-amber-800 transition">
-                  {occ.name}
-                </h4>
-                <p className="text-[10px] text-stone-500 line-clamp-2 mt-0.5">{occ.desc}</p>
-              </div>
-            </Link>
+            <OccasionVideoCard key={occ.slug} occasion={occ} />
           ))}
         </div>
       </section>

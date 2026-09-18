@@ -18,6 +18,7 @@ export interface CreateBookingInput {
   guestCount: number;
   cateringType: CateringType;
   selectedAddonIds?: string[];
+  packageId?: string;
 }
 
 export interface CreateExternalBookingInput {
@@ -51,6 +52,7 @@ export async function createBookingWithLock(input: CreateBookingInput) {
     guestCount,
     cateringType,
     selectedAddonIds = [],
+    packageId,
   } = input;
 
   const reqStart = startDate || eventDate || '';
@@ -201,6 +203,7 @@ export async function createBookingWithLock(input: CreateBookingInput) {
       guestCount,
       cateringType,
       selectedAddonIds,
+      packageId,
     });
 
     // 5. Generate Booking Number
@@ -218,6 +221,11 @@ export async function createBookingWithLock(input: CreateBookingInput) {
         hallId,
         customerId,
         occasionId,
+        packageId: pricing.packageId || null,
+        packageName: pricing.packageName || null,
+        packagePrice: pricing.packagePrice || 0,
+        bulkDiscountTier: pricing.bulkDiscountTier || null,
+        bulkDiscountAmount: pricing.bulkDiscountAmount || 0,
         eventDate: reqStart,
         startDate: reqStart,
         endDate: reqEnd,
@@ -227,12 +235,13 @@ export async function createBookingWithLock(input: CreateBookingInput) {
         guestCount,
         cateringType,
         status: 'PAYMENT_PENDING',
+        bookingType: 'ONLINE',
         holdExpiresAt,
         baseRentalAmount: pricing.baseRental + pricing.weekendSurcharge,
         cateringAmount: pricing.cateringTotal,
         addonsAmount: pricing.addonsTotal,
         taxesAmount: pricing.taxesAmount,
-        discountAmount: 0,
+        discountAmount: pricing.bulkDiscountAmount || 0,
         totalAmount: pricing.totalAmount,
         platformCommissionPercent: pricing.platformCommissionPercent,
         platformCommissionAmount: pricing.platformCommissionAmount,
@@ -249,6 +258,7 @@ export async function createBookingWithLock(input: CreateBookingInput) {
       include: {
         hall: true,
         items: true,
+        package: true,
       },
     });
 
@@ -281,13 +291,46 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
   const numberOfDays = Math.max(1, diffDays + 1);
 
   return prisma.$transaction(async (tx) => {
-    // Verify manager owns this hall
+    // 0. Acquire pessimistic row-level write lock on the venue row to strictly serialize concurrent online & offline bookings
+    await tx.$executeRaw`SELECT id FROM "Hall" WHERE id = ${hallId} FOR UPDATE;`;
+
+    // Verify manager owns this hall (or admin override)
     const hall = await tx.hall.findFirst({
-      where: { id: hallId, managerId },
+      where: { id: hallId },
     });
 
     if (!hall) {
-      throw new Error('Venue not found or unauthorized');
+      throw new Error('Venue not found');
+    }
+
+    if (hall.managerId !== managerId && managerId !== 'ADMIN') {
+      // Check if managerId belongs to an admin user
+      const adminUser = await tx.user.findFirst({
+        where: { id: managerId, role: 'ADMIN' },
+      });
+      if (!adminUser) {
+        throw new Error('Venue not found or unauthorized');
+      }
+    }
+
+    // Check blackout blocks
+    const blocks = await tx.availabilityBlock.findMany({
+      where: {
+        hallId,
+        startDate: { lte: reqEnd },
+        endDate: { gte: reqStart },
+      },
+    });
+
+    for (const block of blocks) {
+      if (isDateRangeOverlapping(block.startDate, block.endDate, reqStart, reqEnd)) {
+        if (reqStart !== reqEnd || block.startDate !== block.endDate) {
+          throw new Error(`Venue is blocked by management for: ${block.reason}`);
+        }
+        if (isTimeIntervalOverlapping(startTime, endTime, block.startTime, block.endTime)) {
+          throw new Error(`Venue is blocked by management for: ${block.reason}`);
+        }
+      }
     }
 
     // Check availability across range
@@ -340,6 +383,9 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
         hallId,
         customerId: null,
         isExternal: true,
+        bookingType: 'OFFLINE_MANUAL',
+        createdById: managerId,
+        internalNotes: input.notes || 'Offline booking recorded via staff portal',
         externalCustomerName: customerName,
         externalCustomerPhone: customerPhone,
         occasionId: occasionId || null,
@@ -358,6 +404,40 @@ export async function createExternalBooking(input: CreateExternalBookingInput) {
         platformCommissionPercent: 0,
         platformCommissionAmount: 0,
         managerPayoutAmount: totalAmount,
+      },
+    });
+
+    let resolvedActorId: string | null = null;
+    if (managerId) {
+      const mgr = await tx.managerProfile.findUnique({
+        where: { id: managerId },
+        select: { userId: true },
+      });
+      const targetUserId = mgr?.userId || managerId;
+      const userExists = await tx.user.findUnique({
+        where: { id: targetUserId },
+        select: { id: true },
+      });
+      if (userExists) {
+        resolvedActorId = userExists.id;
+      }
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorId: resolvedActorId,
+        actorRole: 'MANAGER',
+        action: 'OFFLINE_BOOKING_CREATED',
+        entityType: 'BOOKING',
+        entityId: booking.id,
+        details: JSON.stringify({
+          bookingNumber,
+          hallId,
+          customerName,
+          customerPhone,
+          dates: `${reqStart} to ${reqEnd}`,
+          totalAmount,
+        }),
       },
     });
 
@@ -510,7 +590,7 @@ export async function confirmBookingPayment(params: {
     // Audit log
     await tx.auditLog.create({
       data: {
-        actorId: booking.customerId || 'SYSTEM',
+        actorId: booking.customerId || null,
         actorRole: 'CUSTOMER',
         action: 'BOOKING_PAYMENT_CONFIRMED',
         entityType: 'BOOKING',
