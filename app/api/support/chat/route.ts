@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { processChatQuery, sanitizeChatOutput } from '@/lib/services/aiChatService';
 
 export async function POST(request: Request) {
   try {
@@ -24,18 +25,19 @@ export async function POST(request: Request) {
       lower.includes('manager email') ||
       lower.includes('contact the owner') ||
       lower.includes('owner phone') ||
-      lower.includes('hall manager')
+      lower.includes('hall manager') ||
+      lower.includes('manager details')
     ) {
       return NextResponse.json({
-        reply: `To ensure your reservation guarantee, pricing transparency, and complete dispute protection, Utsav Venues acts as your verified booking intermediary. Direct venue manager contact details are managed exclusively through our team.
-        
+        reply: `To protect your booking guarantee, pricing transparency, and complete dispute resolution, Utsav Venues acts as your verified booking intermediary. Direct venue manager personal contact details are kept strictly confidential.
+
 For any inquiries, special venue requests, or site visit scheduling, our dedicated Concierge Care team is available 24/7 at **1800-UTSAV-CARE** or via email at **support@utsavvenues.com**.`,
         category: 'POLICY',
         suggestions: ['Check Booking Status', 'Venue Packages', 'Cancellation Policy', 'Raise Support Ticket'],
       });
     }
 
-    // 2. Booking Status Lookup Intent
+    // 2. Booking Status Lookup Intent (Authoritative direct DB retrieval)
     const bookingMatch = query.match(/BK-\d{4}-\d{5}-[A-Z0-9]{4}/i) || (bookingNumber ? [bookingNumber] : null);
     if (bookingMatch || lower.includes('booking status') || lower.includes('my booking') || lower.includes('track booking')) {
       const refNumber = bookingMatch ? bookingMatch[0].toUpperCase() : null;
@@ -135,103 +137,26 @@ All communications and host coordination are handled through Utsav Concierge.`,
       });
     }
 
-    // 3. Packages & Pricing Inquiries
-    if (lower.includes('package') || lower.includes('silver') || lower.includes('gold') || lower.includes('platinum') || lower.includes('bundle') || lower.includes('bulk discount')) {
-      return NextResponse.json({
-        reply: `**Utsav Venues Event Packages & Tiered Volume Discounts:**
-        
-1. **Configurable Venue Packages**:
-   Many banquet halls on Utsav Venues offer tailored event packages (**Silver**, **Gold**, **Platinum**, and **Custom Celebrations**). Packages bundle standard amenities, staging, ambient lighting, and setup services at preferential bundled pricing.
-   
-2. **Tiered Guest Volume Discounts**:
-   When booking for large gatherings, our server automatically computes bulk savings based on verified guest volume:
-   • **100–199 Guests:** ~5% off base rental & catering
-   • **200–299 Guests:** ~8% celebration discount
-   • **300+ Guests:** ~12% grand gathering discount
-
-3. **Individual Add-ons**:
-   You can always customize any booking with individual add-ons (DJ, Projector, Bridal Suite, Valet Parking) alongside your selected package.`,
-        suggestions: ['Discover Venues with Packages', 'How is price calculated?', 'Raise Support Ticket'],
-      });
-    }
-
-    // 4. Cancellation & Refund Policy Inquiries
-    if (lower.includes('cancel') || lower.includes('refund') || lower.includes('policy')) {
-      return NextResponse.json({
-        reply: `**Utsav Venues Transparent Cancellation & Refund Policy:**
-        
-• **Standard Refund Window:** Bookings cancelled at least **72 hours** prior to the event start date are eligible for a **80% refund** of the total booking amount (retaining a standard 20% venue operational & turnaround fee).
-• **Inside 72 Hours:** Cancellations made within 72 hours of event commencement are non-refundable due to vendor allocation and calendar reservation locks.
-• **Automated Processing:** Approved refunds are initiated immediately to your original payment source within 5–7 business days.
-• **Zero Double-Bookings:** When you cancel, your slot is instantly and safely returned to the public calendar.`,
-        suggestions: ['Check Cancellation for My Booking', 'Speak to Concierge', 'Raise Support Ticket'],
-      });
-    }
-
-    // 5. KYC & Identity Verification Inquiries
-    if (lower.includes('kyc') || lower.includes('document') || lower.includes('id proof') || lower.includes('aadhaar') || lower.includes('pan card') || lower.includes('passport')) {
-      return NextResponse.json({
-        reply: `**Identity Verification & Document Guidelines:**
-        
-• **Why Required:** As per local administrative security guidelines and hospitality compliance, valid photo ID is required for primary booking attendees.
-• **Member Limit:** Up to **5 key attendees / family members** (Primary Host + up to 4 key guests) can submit their documents.
-• **Accepted Formats:** Aadhaar Card, PAN Card, Passport, Voter ID (PDF, JPG, PNG, up to 5 MB per document).
-• **Strict Privacy:** Documents are accessible **only** to Utsav Venues authorized Admin Verification officers. They are **never** shared publicly and are **never** accessible to hall managers.
-• **Rejection & Re-upload:** If a document is unclear or rejected, you will receive an explanatory note and can instantly re-upload from your booking voucher page.`,
-        suggestions: ['View Booking Documents', 'Security & Privacy Policy', 'Raise Support Ticket'],
-      });
-    }
-
-    // 6. Venue Discovery & Recommendations Intent
-    if (lower.includes('find venue') || lower.includes('recommend') || lower.includes('hall in') || lower.includes('venues in') || lower.includes('wedding hall') || lower.includes('banquet')) {
-      // Find top 3 approved venues
-      const topHalls = await prisma.hall.findMany({
-        where: { status: 'APPROVED' },
-        take: 3,
-        include: {
-          city: { select: { name: true } },
-          pricingRule: { select: { baseRentalPrice: true } },
-        },
-        orderBy: { isFeatured: 'desc' },
-      });
-
-      const list = topHalls.map((h) => `• **${h.name}** (${h.city?.name}) — From ₹${(h.pricingRule?.baseRentalPrice || 50000).toLocaleString('en-IN')}/day (${h.minCapacity}–${h.maxCapacity} guests)`).join('\n');
-
-      return NextResponse.json({
-        reply: `Here are some of our top verified and approved venues across India with guaranteed slot locking:
-        
-${list}
-
-You can filter venues by city, guest count, and occasion from our search page!`,
-        suggestions: ['Search in Bangalore', 'Search in Mumbai', 'Search in Delhi NCR', 'Check Dates & Pricing'],
-      });
-    }
-
-    // 7. Support Ticket Escalation / Unresolved Fallback
-    if (lower.includes('raise ticket') || lower.includes('speak to human') || lower.includes('support ticket') || lower.includes('help me') || lower.includes('complaint')) {
-      // Prompt user to provide contact details to escalate
+    // 3. Support Ticket Escalation
+    if (lower.includes('raise ticket') || lower.includes('speak to human') || lower.includes('support ticket') || lower.includes('complaint')) {
       return NextResponse.json({
         reply: `I would be happy to escalate your request directly to our human Concierge Support Specialists. 
 
 To open a priority ticket, please submit our instant [Contact Support Form](/contact) and an automated acknowledgement ticket will be dispatched to your email immediately.
-You can also call Utsav Concierge at **1800-UTSAV-CARE**.`,
+You can also call Utsav Concierge at **1800-UTSAV-CARE** or email **support@utsavvenues.com**.`,
         actionRequired: 'CREATE_TICKET_FORM',
         suggestions: ['Open Contact Form', 'Call 1800-UTSAV-CARE', 'Check Cancellation Policy'],
       });
     }
 
-    // Default intelligent assistant response with grounded options
-    return NextResponse.json({
-      reply: `Hello! I am your **Utsav Venues Assistant**. I can help you with verified venue recommendations, checking your booking status, package details, tiered bulk discounts, KYC guidelines, or cancellation rules.
+    // 4. Dynamic AI Chatbot Processing (Google Gemini API with dynamic site knowledge & strict guardrails)
+    const result = await processChatQuery(query);
 
-How can I assist your celebration today?`,
-      suggestions: [
-        'Check Booking Status',
-        'Event Packages & Bulk Discounts',
-        'KYC Document Requirements',
-        'Cancellation & Refund Policy',
-        'Raise Support Ticket',
-      ],
+    return NextResponse.json({
+      reply: sanitizeChatOutput(result.reply),
+      suggestions: result.suggestions,
+      category: result.category,
+      source: result.source,
     });
   } catch (error: any) {
     console.error('Chatbot API error:', error);
