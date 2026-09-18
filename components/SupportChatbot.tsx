@@ -27,6 +27,8 @@ export default function SupportChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isModalActive, setIsModalActive] = useState(false);
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-1',
@@ -54,6 +56,31 @@ export default function SupportChatbot() {
       scrollToBottom();
     }
   }, [messages, isOpen]);
+
+  // Listen for active modals to avoid covering critical wizard workflows
+  useEffect(() => {
+    const checkModalActive = () => {
+      const active = document.body.classList.contains('smart-modal-active');
+      setIsModalActive(active);
+    };
+
+    const observer = new MutationObserver(checkModalActive);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    checkModalActive();
+
+    return () => observer.disconnect();
+  }, []);
+
+  // ESC to close chat window
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   const handleSendMessage = async (textToSend?: string) => {
     const userText = (textToSend || input).trim();
@@ -111,11 +138,14 @@ export default function SupportChatbot() {
     }
   };
 
+  // If a critical full-screen modal is open, completely hide floating chatbot to prevent any overlap
+  if (isModalActive) return null;
+
   return (
-    <div className="fixed bottom-5 right-5 z-50 select-none">
-      {/* Chat Window */}
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 select-none">
+      {/* Chat Window Panel */}
       {isOpen && (
-        <div className="mb-3 w-[calc(100vw-32px)] sm:w-96 h-[500px] max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-stone-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="mb-3 w-[calc(100vw-32px)] sm:w-96 h-[520px] max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-stone-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
           {/* Header */}
           <div className="bg-gradient-to-r from-amber-700 via-brand-600 to-amber-800 p-3.5 text-white flex items-center justify-between shadow">
             <div className="flex items-center gap-2.5">
@@ -134,7 +164,7 @@ export default function SupportChatbot() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition"
+              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
               aria-label="Close concierge chat"
             >
               <X className="w-4 h-4" />
@@ -210,17 +240,20 @@ export default function SupportChatbot() {
         </div>
       )}
 
-      {/* Floating Launcher Button */}
+      {/* Circular Floating Action Button Launcher */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-full shadow-2xl border border-amber-400/40 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-        aria-label="Open Utsav Venues Support Assistant"
+        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-2xl border-2 border-amber-400/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer relative group focus:outline-none focus:ring-4 focus:ring-amber-400/40"
+        aria-label="Open Concierge Support"
+        title="Open Concierge Support"
       >
-        <MessageSquare className="w-5 h-5 text-amber-100" />
-        <span className="font-bold text-xs tracking-wide hidden sm:inline">Concierge Support</span>
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+        <MessageSquare className="w-6 h-6 sm:w-7 sm:h-7 text-amber-100 transition-transform group-hover:scale-110" />
+        
+        {/* Status indicator dot on circle edge */}
+        <span className="absolute top-1.5 right-1.5 flex h-3.5 w-3.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white"></span>
         </span>
       </button>
     </div>

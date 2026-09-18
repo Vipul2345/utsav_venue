@@ -34,6 +34,12 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [smartBriefOpen, setSmartBriefOpen] = useState(false);
 
+  useEffect(() => {
+    const handleOpenSmartBrief = () => setSmartBriefOpen(true);
+    window.addEventListener('utsav_open_smart_brief', handleOpenSmartBrief);
+    return () => window.removeEventListener('utsav_open_smart_brief', handleOpenSmartBrief);
+  }, []);
+
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -513,6 +519,17 @@ export default function Navbar() {
               </div>
             )}
 
+            {/* Mobile / Tablet Plan Event Quick Trigger */}
+            <button
+              type="button"
+              onClick={() => setSmartBriefOpen(true)}
+              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-300/80 text-amber-900 hover:bg-amber-500/25 text-xs font-black transition shadow-xs cursor-pointer"
+              aria-label="Open Plan Event Assistant"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>Plan</span>
+            </button>
+
             {/* Mobile / Tablet menu toggle */}
             <button
               ref={mobileMenuButtonRef}
@@ -560,12 +577,46 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg text-xs font-bold flex items-center gap-1 min-h-[36px] px-2.5 bg-stone-50 border border-stone-200/60"
+                className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg text-xs font-bold flex items-center gap-1 min-h-[36px] px-2.5 bg-stone-50 border border-stone-200/60 cursor-pointer"
                 aria-label="Close navigation menu"
               >
                 <X className="w-4 h-4 text-stone-700" />
                 <span>Close</span>
               </button>
+            </div>
+
+            {/* Mobile Feature Parity: Plan Event & Compare Hub */}
+            <div className="grid grid-cols-2 gap-2 pb-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setSmartBriefOpen(true);
+                }}
+                className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gradient-to-r from-amber-500/15 to-brand-500/15 border border-amber-300/80 text-stone-900 font-black text-xs hover:bg-amber-100 transition shadow-xs text-left cursor-pointer"
+              >
+                <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-white shrink-0 shadow-xs">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-black text-stone-900 text-xs truncate">Plan Event</div>
+                  <div className="text-[10px] text-amber-900/80 font-medium truncate">Smart Assistant</div>
+                </div>
+              </button>
+
+              <Link
+                href="/compare"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 p-2.5 rounded-xl bg-stone-50 border border-stone-200/90 text-stone-900 font-black text-xs hover:bg-amber-50 transition shadow-xs text-left"
+              >
+                <div className="w-7 h-7 rounded-lg bg-stone-200 flex items-center justify-center text-stone-700 shrink-0">
+                  <Scale className="w-4 h-4 text-amber-700" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-black text-stone-900 text-xs truncate">Compare</div>
+                  <div className="text-[10px] text-stone-500 font-medium truncate">Shortlist Matrix</div>
+                </div>
+              </Link>
             </div>
 
             {/* Quick Demo Role Switcher */}
@@ -681,6 +732,25 @@ export default function Navbar() {
                 >
                   Find Venues
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setSmartBriefOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-brand-700 hover:bg-amber-50 transition text-left cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Plan Event Assistant</span>
+                </button>
+                <Link
+                  href="/compare"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  <Scale className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>Compare Venues</span>
+                </Link>
                 <Link
                   href="/about"
                   onClick={() => setMobileMenuOpen(false)}
@@ -723,6 +793,25 @@ export default function Navbar() {
                   className="flex items-center min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
                 >
                   Find Venues
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setSmartBriefOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-brand-700 hover:bg-amber-50 transition text-left cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Plan Event Assistant</span>
+                </button>
+                <Link
+                  href="/compare"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-amber-50 transition"
+                >
+                  <Scale className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>Compare Venues</span>
                 </Link>
                 <Link
                   href="/bookings"
