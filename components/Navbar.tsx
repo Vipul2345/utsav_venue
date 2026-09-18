@@ -18,9 +18,11 @@ import {
   Mail,
   MapPin,
   CheckCircle2,
+  Scale,
 } from 'lucide-react';
 import DemoAccountSwitcher from './DemoAccountSwitcher';
 import NotificationsDropdown from './NotificationsDropdown';
+import SmartEventBriefModal from './SmartEventBriefModal';
 import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
 export default function Navbar() {
@@ -30,6 +32,7 @@ export default function Navbar() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [smartBriefOpen, setSmartBriefOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -109,6 +112,25 @@ export default function Navbar() {
                     Find Venues
                   </Link>
                   <Link
+                    href="/compare"
+                    className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 ${
+                      pathname.startsWith('/compare')
+                        ? 'text-brand-600 bg-amber-50 font-semibold'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Scale className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Compare</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setSmartBriefOpen(true)}
+                    className="px-3 py-1.5 rounded-lg text-brand-700 hover:bg-amber-50 font-semibold transition flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Plan Event</span>
+                  </button>
+                  <Link
                     href="/about"
                     className={`px-3 py-1.5 rounded-lg transition ${
                       pathname === '/about'
@@ -144,6 +166,25 @@ export default function Navbar() {
                   >
                     Find Venues
                   </Link>
+                  <Link
+                    href="/compare"
+                    className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 ${
+                      pathname.startsWith('/compare')
+                        ? 'text-brand-600 bg-amber-50 font-semibold'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Scale className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Compare</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setSmartBriefOpen(true)}
+                    className="px-3 py-1.5 rounded-lg text-brand-700 hover:bg-amber-50 font-semibold transition flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Plan Event</span>
+                  </button>
                   <Link
                     href="/bookings"
                     className={`px-3 py-1.5 rounded-lg transition ${
@@ -798,6 +839,12 @@ export default function Navbar() {
           </div>
         </>
       )}
+
+      {/* Global Smart Event Brief Assistant Modal */}
+      <SmartEventBriefModal
+        isOpen={smartBriefOpen}
+        onClose={() => setSmartBriefOpen(false)}
+      />
     </header>
   );
 }

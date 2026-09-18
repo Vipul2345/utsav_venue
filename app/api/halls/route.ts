@@ -11,6 +11,8 @@ export async function GET(request: Request) {
     const occasionSlug = searchParams.get('occasion');
     const date = searchParams.get('date');
     const guests = searchParams.get('guests') ? parseInt(searchParams.get('guests')!, 10) : null;
+    const venueType = searchParams.get('venueType');
+    const seating = searchParams.get('seating'); // FLOATING, THEATRE, ROUND_TABLE, CLASSROOM
     const minPrice = searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : null;
     const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : null;
     const minRating = searchParams.get('minRating') ? parseFloat(searchParams.get('minRating')!) : null;
@@ -39,6 +41,11 @@ export async function GET(request: Request) {
       where.locality = { slug: localitySlug };
     }
 
+    // Venue Type filtering
+    if (venueType && venueType !== 'all') {
+      where.venueType = venueType;
+    }
+
     // Occasion must be approved for this hall
     if (occasionSlug && occasionSlug !== 'all') {
       where.occasions = {
@@ -49,10 +56,18 @@ export async function GET(request: Request) {
       };
     }
 
-    // Capacity matching
+    // Capacity matching with Seating Style density adjustment
     if (guests && !isNaN(guests) && guests > 0) {
+      let requiredMaxCapacity = guests;
+      if (seating === 'ROUND_TABLE') {
+        requiredMaxCapacity = Math.ceil(guests / 0.65);
+      } else if (seating === 'CLASSROOM') {
+        requiredMaxCapacity = Math.ceil(guests / 0.55);
+      } else if (seating === 'THEATRE') {
+        requiredMaxCapacity = Math.ceil(guests / 0.85);
+      }
       where.minCapacity = { lte: guests };
-      where.maxCapacity = { gte: guests };
+      where.maxCapacity = { gte: requiredMaxCapacity };
     }
 
     // Policy & Amenity filters
@@ -117,6 +132,9 @@ export async function GET(request: Request) {
           where: { status: 'CONFIRMED' },
           select: { id: true },
         },
+        packages: {
+          where: { isActive: true },
+        },
       },
     });
 
@@ -159,6 +177,7 @@ export async function GET(request: Request) {
           city: hall.city,
           locality: hall.locality,
           address: hall.address,
+          venueType: hall.venueType || 'Banquet Hall',
           minCapacity: hall.minCapacity,
           maxCapacity: hall.maxCapacity,
           indoorAreaSqFt: hall.indoorAreaSqFt,
@@ -172,6 +191,7 @@ export async function GET(request: Request) {
           pricingRule: hall.pricingRule,
           occasions: hall.occasions.map((ho) => ho.occasion),
           amenities: hall.amenities.map((ha) => ha.amenity),
+          packages: hall.packages || [],
           averageRating: avgRating,
           reviewCount,
           isDateAvailable,

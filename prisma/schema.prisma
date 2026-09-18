@@ -26,6 +26,8 @@ model User {
   favorites      Favorite[]
   notifications  Notification[]
   auditLogs      AuditLog[]
+  quotes         Quote[]
+  leads          Lead[]
 
   @@index([email])
   @@index([role])
@@ -173,6 +175,7 @@ model Hall {
   hasParking      Boolean   @default(true)
   parkingCapacity Int?
   roomsCount      Int       @default(2)
+  venueType       String    @default("Banquet Hall") // Banquet Hall, Lawn / Farmhouse, Resort, Terrace, Hotel Ballroom, Heritage / Palace, Corporate Convention, Poolside
 
   status          String    @default("PENDING_APPROVAL") // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, SUSPENDED, ARCHIVED
   rejectionReason String?
@@ -205,11 +208,14 @@ model Hall {
   favorites       Favorite[]
   pastEvents      PastEventMedia[]
   packages        VenuePackage[]
+  quotes          Quote[]
+  leads           Lead[]
 
   @@index([managerId])
   @@index([cityId])
   @@index([status])
   @@index([isFeatured])
+  @@index([venueType])
   @@index([minCapacity, maxCapacity])
 }
 
@@ -562,5 +568,89 @@ model EventInvitation {
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@index([bookingId])
+}
+
+model Quote {
+  id                    String         @id @default(uuid())
+  quoteNumber           String         @unique
+  hallId                String
+  userId                String?
+  customerName          String
+  customerEmail         String
+  customerPhone         String
+  eventType             String         // Wedding, Reception, Corporate, Birthday, Exhibition, etc.
+  guestCount            Int
+  eventDate             DateTime
+  slot                  String         // FULL_DAY, MORNING, EVENING
+  status                String         @default("REQUESTED") // REQUESTED, GENERATED, SENT, EXPIRED, ACCEPTED, REJECTED, CONVERTED
+  packageId             String?
+  selectedAddons        String?        // JSON array of selected addon configs
+  baseHallRent          Float          @default(0)
+  cateringCost          Float          @default(0)
+  decorCost             Float          @default(0)
+  addonsCost            Float          @default(0)
+  cleaningFee           Float          @default(0)
+  securityDeposit       Float          @default(0)
+  taxes                 Float          @default(0)
+  totalEstimatedAmount  Float          @default(0)
+  validUntil            DateTime?
+  notes                 String?
+  specialRequirements   String?
+  isUtsavIntermediated  Boolean        @default(true) // Enforces zero direct manager leak
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  hall                  Hall           @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  user                  User?          @relation(fields: [userId], references: [id])
+  versions              QuoteVersion[]
+  lead                  Lead?
+
+  @@index([hallId])
+  @@index([userId])
+  @@index([status])
+  @@index([customerEmail])
+  @@index([eventDate])
+}
+
+model QuoteVersion {
+  id             String   @id @default(uuid())
+  quoteId        String
+  versionNumber  Int      @default(1)
+  breakdownJson  String   // JSON string of itemized breakdown, line items & policies
+  totalAmount    Float
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  quote          Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+}
+
+model Lead {
+  id            String    @id @default(uuid())
+  hallId        String?
+  userId        String?
+  quoteId       String?   @unique
+  customerName  String
+  customerPhone String
+  customerEmail String
+  eventType     String
+  guestCount    Int
+  budgetRange   String?
+  targetDate    DateTime?
+  status        String    @default("NEW") // NEW, CONTACTED_BY_UTSAV, QUALIFIED, QUOTED, NEGOTIATING, CONVERTED, LOST
+  source        String    @default("WEBSITE") // WEBSITE, COMPARE, SMART_BRIEF, VENUE_DETAIL
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  hall          Hall?     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  user          User?     @relation(fields: [userId], references: [id])
+  quote         Quote?    @relation(fields: [quoteId], references: [id])
+
+  @@index([hallId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 

@@ -29,7 +29,16 @@ import {
   X,
   Video,
   Layers,
+  Scale,
+  FileText,
+  Download,
 } from 'lucide-react';
+import CompareTray, {
+  addVenueToCompare,
+  removeVenueFromCompare,
+  isVenueCompared,
+} from '@/components/CompareTray';
+import { SEATING_STYLES } from '@/lib/types/eventBrief';
 
 const VenueMap = dynamic(() => import('@/components/VenueMap'), {
   ssr: false,
@@ -63,6 +72,20 @@ export default function HallDetailsPage() {
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [pastEventCategory, setPastEventCategory] = useState<string>('ALL');
   const [activeVideoModal, setActiveVideoModal] = useState<string | null>(null);
+
+  // Layout & Comparison state
+  const [selectedSeatingStyle, setSelectedSeatingStyle] = useState<string>('FLOATING');
+  const [isCompared, setIsCompared] = useState(false);
+
+  // Custom Quote Modal state
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [quoteCustomerName, setQuoteCustomerName] = useState('');
+  const [quoteCustomerEmail, setQuoteCustomerEmail] = useState('');
+  const [quoteCustomerPhone, setQuoteCustomerPhone] = useState('');
+  const [quoteSpecialReq, setQuoteSpecialReq] = useState('');
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
+  const [quoteResult, setQuoteResult] = useState<any>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
 
   // Calculated Pricing Breakdown
   const [pricingBreakdown, setPricingBreakdown] = useState<any>(null);
@@ -265,6 +288,81 @@ export default function HallDetailsPage() {
     );
   };
 
+  // Sync comparison state
+  useEffect(() => {
+    if (!hall) return;
+    const sync = () => {
+      setIsCompared(isVenueCompared(hall.id));
+    };
+    sync();
+    window.addEventListener('utsav_compare_updated', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('utsav_compare_updated', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, [hall]);
+
+  const handleToggleCompare = () => {
+    if (!hall) return;
+    if (isVenueCompared(hall.id)) {
+      removeVenueFromCompare(hall.id);
+      setIsCompared(false);
+    } else {
+      const added = addVenueToCompare({
+        id: hall.id,
+        name: hall.name,
+        slug: hall.slug,
+        image: hall.media?.[0]?.url,
+        city: hall.city?.name,
+      });
+      if (added) setIsCompared(true);
+    }
+  };
+
+  const handleQuoteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setQuoteSubmitting(true);
+    setQuoteError(null);
+    try {
+      const selectedOccasion =
+        hall.occasions?.find((o: any) => o.occasion.id === selectedOccasionId)?.occasion?.name ||
+        'Wedding';
+      const eventDateToUse =
+        startDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const res = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hallId: hall.id,
+          customerName: quoteCustomerName,
+          customerEmail: quoteCustomerEmail,
+          customerPhone: quoteCustomerPhone,
+          eventType: selectedOccasion,
+          guestCount,
+          eventDate: eventDateToUse,
+          slot: startTime < '15:00' && endTime <= '16:00' ? 'MORNING' : 'FULL_DAY',
+          packageId: selectedPackageId || undefined,
+          selectedAddons: selectedAddonIds.map((id) => ({ addonId: id })),
+          specialRequirements: quoteSpecialReq,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to submit quote request');
+      }
+
+      const data = await res.json();
+      setQuoteResult(data);
+    } catch (err: any) {
+      setQuoteError(err.message);
+    } finally {
+      setQuoteSubmitting(false);
+    }
+  };
+
   const handleProceedBooking = () => {
     if (!startDate || !endDate || !availabilityStatus.available) return;
 
@@ -308,6 +406,9 @@ export default function HallDetailsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-200 pb-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 font-bold text-[10px] uppercase tracking-wider">
+              {hall.venueType || 'Banquet Hall'}
+            </span>
             <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px] uppercase tracking-wider">
               {hall.city?.name}
             </span>
@@ -332,15 +433,31 @@ export default function HallDetailsPage() {
           </p>
         </div>
 
-        {/* Rating Summary Card */}
-        <div className="flex items-center gap-3 bg-white border border-stone-200 rounded-2xl p-3 shadow-sm shrink-0">
-          <div className="w-12 h-12 rounded-xl bg-amber-500 text-stone-900 flex flex-col items-center justify-center font-black">
-            <span className="text-base leading-none">{hall.averageRating}</span>
-            <Star className="w-3 h-3 fill-stone-900" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-stone-900">Verified Rating</p>
-            <p className="text-[11px] text-stone-600">{hall.reviewCount} verified guest reviews</p>
+        {/* Rating & Actions Card */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={handleToggleCompare}
+            className={`px-3.5 py-3 rounded-2xl border text-xs font-bold transition flex items-center gap-1.5 shadow-sm min-h-[48px] ${
+              isCompared
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
+                : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
+            }`}
+            title={isCompared ? 'Remove from comparison' : 'Add to side-by-side comparison'}
+          >
+            <Scale className="w-4 h-4 text-amber-700" />
+            <span>{isCompared ? 'In Compare' : 'Add to Compare'}</span>
+          </button>
+
+          <div className="flex items-center gap-3 bg-white border border-stone-200 rounded-2xl p-3 shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-amber-500 text-stone-900 flex flex-col items-center justify-center font-black">
+              <span className="text-base leading-none">{hall.averageRating}</span>
+              <Star className="w-3 h-3 fill-stone-900" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-stone-900">Verified Rating</p>
+              <p className="text-[11px] text-stone-600">{hall.reviewCount} verified guest reviews</p>
+            </div>
           </div>
         </div>
       </div>
@@ -434,6 +551,64 @@ export default function HallDetailsPage() {
               <p className="text-sm font-extrabold text-stone-900 mt-0.5">
                 {hall.roomsCount} Bridal Suites
               </p>
+            </div>
+          </div>
+
+          {/* Seating Layout & Capacity Calculator */}
+          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-bold text-stone-900">Seating Layout & Density Calculator</h2>
+                <p className="text-xs text-stone-500">
+                  Floor capacity adapts depending on how tables and seating are arranged.
+                </p>
+              </div>
+              <span className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                Max Hall Limit: {hall.maxCapacity} Guests
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {SEATING_STYLES.map((style) => {
+                const effectiveCapacity = Math.round(hall.maxCapacity * style.ratio);
+                const isSelected = selectedSeatingStyle === style.id;
+                const canAccommodate = effectiveCapacity >= guestCount;
+
+                return (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => setSelectedSeatingStyle(style.id)}
+                    className={`p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                      isSelected
+                        ? 'border-brand-600 bg-brand-50/70 text-brand-900 shadow-sm ring-1 ring-brand-500'
+                        : 'border-stone-200 hover:border-amber-300 bg-stone-50/50'
+                    }`}
+                  >
+                    <div>
+                      <span className="text-xs font-bold block">{style.label}</span>
+                      <span className="text-lg font-black text-stone-900 block mt-1">
+                        ~{effectiveCapacity}
+                      </span>
+                      <span className="text-[10px] text-stone-500">
+                        {Math.round(style.ratio * 100)}% density ratio
+                      </span>
+                    </div>
+
+                    <div className="mt-2 pt-2 border-t border-stone-200/60">
+                      {canAccommodate ? (
+                        <span className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
+                          ✓ Fits {guestCount} guests
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-amber-700 flex items-center gap-1">
+                          ⚠️ Needs ~{Math.ceil(guestCount / style.ratio)} cap
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1257,6 +1432,16 @@ export default function HallDetailsPage() {
               <ArrowRight className="w-4 h-4" />
             </button>
 
+            {/* Request Official Quote CTA */}
+            <button
+              type="button"
+              onClick={() => setQuoteModalOpen(true)}
+              className="w-full py-3 px-4 bg-white border border-brand-600 hover:bg-brand-50 text-brand-700 font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 min-h-[44px]"
+            >
+              <FileText className="w-4 h-4 text-brand-600" />
+              <span>Request Official Quote</span>
+            </button>
+
             <p className="text-[10px] text-stone-600 text-center">
               10-minute temporary payment hold guarantees slot during checkout.
             </p>
@@ -1265,7 +1450,7 @@ export default function HallDetailsPage() {
       </div>
 
       {/* Mobile Floating Sticky Booking CTA Bar (Visible on lg:hidden) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-2xl flex items-center justify-between gap-3">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-2xl flex items-center justify-between gap-2">
         <div>
           <span className="text-[10px] text-stone-600 uppercase font-bold block">
             {pricingBreakdown?.numberOfDays && pricingBreakdown.numberOfDays > 1
@@ -1280,35 +1465,196 @@ export default function HallDetailsPage() {
           </div>
         </div>
 
-        <button
-          type="button"
-          disabled={calculatingPrice}
-          onClick={() => {
-            if (startDate && endDate && availabilityStatus.available && !calculatingPrice) {
-              handleProceedBooking();
-            } else {
-              const widget = document.getElementById('booking-widget');
-              if (widget) {
-                widget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setQuoteModalOpen(true)}
+            className="px-3 py-2.5 bg-white border border-brand-600 text-brand-700 font-bold text-xs rounded-xl shadow-xs flex items-center gap-1 min-h-[44px]"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Quote</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={calculatingPrice}
+            onClick={() => {
+              if (startDate && endDate && availabilityStatus.available && !calculatingPrice) {
+                handleProceedBooking();
+              } else {
+                const widget = document.getElementById('booking-widget');
+                if (widget) {
+                  widget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
               }
-            }
-          }}
-          className={`px-5 py-2.5 font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 min-h-[44px] ${
-            startDate && endDate && availabilityStatus.available && !calculatingPrice
-              ? 'bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white cursor-pointer'
-              : 'bg-amber-100 text-amber-900 border border-amber-300 cursor-pointer font-bold'
-          }`}
-        >
-          <span>
-            {!startDate || !endDate
-              ? 'Check Dates'
-              : availabilityStatus.available
-              ? 'Proceed to book slot'
-              : 'Check Dates'}
-          </span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+            }}
+            className={`px-4 py-2.5 font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 min-h-[44px] ${
+              startDate && endDate && availabilityStatus.available && !calculatingPrice
+                ? 'bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white cursor-pointer'
+                : 'bg-amber-100 text-amber-900 border border-amber-300 cursor-pointer font-bold'
+            }`}
+          >
+            <span>
+              {!startDate || !endDate
+                ? 'Check Dates'
+                : availabilityStatus.available
+                ? 'Book Slot'
+                : 'Check Dates'}
+            </span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
+
+      {/* Quote Request Modal */}
+      {quoteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-amber-100 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-brand-600" />
+                <h3 className="font-bold text-gray-900 text-base">Request Official Quote</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuoteModalOpen(false);
+                  setQuoteResult(null);
+                  setQuoteError(null);
+                }}
+                className="p-1 text-gray-400 hover:text-gray-700 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {quoteResult ? (
+              <div className="space-y-4 py-3">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span>Quote Request Generated Successfully!</span>
+                  </div>
+                  <p className="text-xs text-emerald-700">
+                    Quote Reference:{' '}
+                    <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border border-emerald-300">
+                      {quoteResult.quoteNumber}
+                    </span>
+                  </p>
+                  <p className="text-xs text-emerald-800">
+                    Estimated Amount:{' '}
+                    <span className="font-bold">
+                      ₹{quoteResult.breakdown?.totalEstimatedAmount?.toLocaleString('en-IN')}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="text-xs text-gray-600 space-y-1">
+                  <p>✓ A copy of this quote has been saved to your account.</p>
+                  <p>✓ Utsav Venues concierge team will coordinate availability with venue management on your behalf.</p>
+                  <p className="font-semibold text-gray-800">Strict Zero Spam Guarantee: Your contact info remains private and is never distributed.</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuoteModalOpen(false);
+                    setQuoteResult(null);
+                  }}
+                  className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow transition"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleQuoteSubmit} className="space-y-3.5 text-xs">
+                {quoteError && (
+                  <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-200">
+                    {quoteError}
+                  </div>
+                )}
+
+                <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
+                  <div className="font-bold text-stone-900">{hall.name}</div>
+                  <div className="text-stone-600 flex justify-between">
+                    <span>Target Guests: {guestCount}</span>
+                    <span>Date: {startDate || 'Next Available Slot'}</span>
+                  </div>
+                  <div className="text-brand-700 font-extrabold flex justify-between pt-1 border-t border-amber-200/60">
+                    <span>Estimated Total:</span>
+                    <span>
+                      ₹{(pricingBreakdown?.totalAmount || hall.pricingRule?.baseRentalPrice || 50000).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Your Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={quoteCustomerName}
+                    onChange={(e) => setQuoteCustomerName(e.target.value)}
+                    placeholder="e.g. Priyesh Patel"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      value={quoteCustomerEmail}
+                      onChange={(e) => setQuoteCustomerEmail(e.target.value)}
+                      placeholder="e.g. priyesh@example.com"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Phone / WhatsApp *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={quoteCustomerPhone}
+                      onChange={(e) => setQuoteCustomerPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">
+                    Special Requirements or Custom Add-ons
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={quoteSpecialReq}
+                    onChange={(e) => setQuoteSpecialReq(e.target.value)}
+                    placeholder="e.g. Jain food options, specific mandap height, early decor setup..."
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={quoteSubmitting}
+                  className="w-full py-3 bg-gradient-to-r from-brand-600 to-amber-700 hover:from-brand-700 hover:to-amber-800 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{quoteSubmitting ? 'Generating Quote...' : 'Submit Quote Request'}</span>
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Compare Sticky Tray */}
+      <CompareTray />
     </div>
   );
 }

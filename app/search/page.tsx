@@ -20,7 +20,17 @@ import {
   Heart,
   SlidersHorizontal,
   X,
+  Scale,
 } from 'lucide-react';
+import CompareTray, {
+  addVenueToCompare,
+  removeVenueFromCompare,
+  isVenueCompared,
+  getComparedVenues,
+} from '@/components/CompareTray';
+import SmartEventBriefModal from '@/components/SmartEventBriefModal';
+import EventFilterDrawer from '@/components/EventFilterDrawer';
+import { VENUE_TYPES } from '@/lib/types/eventBrief';
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -29,9 +39,11 @@ function SearchContent() {
   // State initialized from URL params
   const [city, setCity] = useState(searchParams.get('city') || 'bangalore');
   const [locality, setLocality] = useState(searchParams.get('locality') || '');
-  const [occasion, setOccasion] = useState(searchParams.get('occasion') || 'wedding');
+  const [occasion, setOccasion] = useState(searchParams.get('occasion') || searchParams.get('eventType') || 'wedding');
   const [date, setDate] = useState(searchParams.get('date') || '');
-  const [guests, setGuests] = useState(searchParams.get('guests') || '300');
+  const [guests, setGuests] = useState(searchParams.get('guests') || searchParams.get('guestCount') || '300');
+  const [venueType, setVenueType] = useState(searchParams.get('venueType') || '');
+  const [seating, setSeating] = useState(searchParams.get('seating') || '');
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
   const [minRating, setMinRating] = useState(searchParams.get('minRating') || '');
@@ -44,8 +56,11 @@ function SearchContent() {
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'recommended');
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
-  // Mobile Drawer State
+  // Modals & Drawers State
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [smartBriefOpen, setSmartBriefOpen] = useState(false);
+  const [eventDrawerOpen, setEventDrawerOpen] = useState(false);
+  const [comparedSet, setComparedSet] = useState<string[]>([]);
 
   // Metadata from backend
   const [meta, setMeta] = useState<{ cities: any[]; occasions: any[]; amenities: any[] }>({
@@ -122,6 +137,20 @@ function SearchContent() {
     loadMeta();
   }, []);
 
+  // Sync compared venues from localStorage
+  useEffect(() => {
+    const sync = () => {
+      setComparedSet(getComparedVenues().map((v) => v.id));
+    };
+    sync();
+    window.addEventListener('utsav_compare_updated', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('utsav_compare_updated', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
   // Fetch search results whenever filters change
   const executeSearch = async () => {
     setLoading(true);
@@ -132,6 +161,8 @@ function SearchContent() {
       if (occasion) params.set('occasion', occasion);
       if (date) params.set('date', date);
       if (guests) params.set('guests', guests);
+      if (venueType) params.set('venueType', venueType);
+      if (seating) params.set('seating', seating);
       if (minPrice) params.set('minPrice', minPrice);
       if (maxPrice) params.set('maxPrice', maxPrice);
       if (minRating) params.set('minRating', minRating);
@@ -164,6 +195,8 @@ function SearchContent() {
     locality,
     occasion,
     guests,
+    venueType,
+    seating,
     minPrice,
     maxPrice,
     minRating,
@@ -611,6 +644,57 @@ function SearchContent() {
             </button>
           </div>
         </div>
+
+        {/* Venue Type Pills & Smart Match Assistant Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 mt-3 border-t border-stone-100">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setVenueType('')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                !venueType
+                  ? 'bg-amber-800 text-white shadow-xs'
+                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+              }`}
+            >
+              All Types
+            </button>
+            {VENUE_TYPES.map((vt) => (
+              <button
+                key={vt}
+                type="button"
+                onClick={() => setVenueType(venueType === vt ? '' : vt)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                  venueType === vt
+                    ? 'bg-amber-800 text-white shadow-xs'
+                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                }`}
+              >
+                {vt}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setEventDrawerOpen(true)}
+              className="px-3 py-1.5 border border-stone-200 hover:border-amber-400 rounded-xl text-xs font-bold text-stone-700 flex items-center gap-1.5 hover:bg-stone-50 transition"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-amber-700" />
+              <span>Adaptive Filters</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSmartBriefOpen(true)}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-brand-600 to-amber-600 hover:from-brand-700 hover:to-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Smart Match</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Mobile Toolbar: Filter Drawer Button + Sort (Visible on lg:hidden) */}
@@ -785,6 +869,10 @@ function SearchContent() {
 
                       {/* Badges */}
                       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-3 text-[11px]">
+                        <span className="px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-900 font-semibold">
+                          {hall.venueType || 'Banquet Hall'}
+                        </span>
+
                         <span className="px-2.5 py-1 rounded-md bg-stone-100 text-stone-800 font-semibold flex items-center gap-1">
                           <Users className="w-3 h-3 text-amber-700" />
                           <span>Cap: {hall.minCapacity} – {hall.maxCapacity} Guests</span>
@@ -827,6 +915,32 @@ function SearchContent() {
                         <button
                           type="button"
                           onClick={() => {
+                            if (comparedSet.includes(hall.id)) {
+                              removeVenueFromCompare(hall.id);
+                            } else {
+                              addVenueToCompare({
+                                id: hall.id,
+                                name: hall.name,
+                                slug: hall.slug,
+                                image: hall.coverImage,
+                                city: hall.city?.name,
+                              });
+                            }
+                          }}
+                          className={`w-full sm:w-auto px-3 py-2.5 border rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] sm:min-h-0 ${
+                            comparedSet.includes(hall.id)
+                              ? 'border-brand-600 bg-brand-50 text-brand-700 shadow-xs'
+                              : 'border-stone-300 bg-white hover:bg-stone-50 text-stone-700'
+                          }`}
+                          title={comparedSet.includes(hall.id) ? 'Remove from comparison' : 'Add to compare'}
+                        >
+                          <Scale className="w-3.5 h-3.5 text-amber-700" />
+                          <span>{comparedSet.includes(hall.id) ? 'Comparing' : 'Compare'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
                             const destination =
                               hall.latitude && hall.longitude
                                 ? `${hall.latitude},${hall.longitude}`
@@ -860,6 +974,56 @@ function SearchContent() {
           )}
         </div>
       </div>
+
+      {/* Compare Sticky Tray */}
+      <CompareTray />
+
+      {/* Smart Event Brief Assistant Modal */}
+      <SmartEventBriefModal
+        isOpen={smartBriefOpen}
+        onClose={() => setSmartBriefOpen(false)}
+        initialValues={{
+          city: meta.cities.find((c) => c.slug === city)?.name || city,
+          eventType: occasion,
+          guestCount: parseInt(guests, 10) || 200,
+          date,
+        }}
+      />
+
+      {/* Adaptive Event Filters Drawer */}
+      <EventFilterDrawer
+        isOpen={eventDrawerOpen}
+        onClose={() => setEventDrawerOpen(false)}
+        filters={{
+          city,
+          occasion,
+          venueType,
+          seating,
+          guests,
+          minPrice,
+          maxPrice,
+          minRating,
+          setting,
+          hasParking,
+          alcoholAllowed,
+          outsideCateringAllowed,
+          outsideDecorAllowed,
+          minRooms,
+        }}
+        onChange={(newFilters) => {
+          if (newFilters.venueType !== undefined) setVenueType(newFilters.venueType || '');
+          if (newFilters.seating !== undefined) setSeating(newFilters.seating || '');
+          if (newFilters.hasParking !== undefined) setHasParking(newFilters.hasParking);
+          if (newFilters.alcoholAllowed !== undefined) setAlcoholAllowed(newFilters.alcoholAllowed);
+          if (newFilters.outsideCateringAllowed !== undefined) setOutsideCateringAllowed(newFilters.outsideCateringAllowed);
+          if (newFilters.outsideDecorAllowed !== undefined) setOutsideDecorAllowed(newFilters.outsideDecorAllowed);
+          if (newFilters.setting !== undefined) setSetting(newFilters.setting || '');
+          if (newFilters.minRating !== undefined) setMinRating(newFilters.minRating?.toString() || '');
+          if (newFilters.minRooms !== undefined) setMinRooms(newFilters.minRooms?.toString() || '');
+        }}
+        onReset={resetAllFilters}
+        onApply={executeSearch}
+      />
     </div>
   );
 }
