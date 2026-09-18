@@ -105,5 +105,14 @@ describe('AI Chatbot & Dynamic Website Grounding (Google Gemini API Service)', (
       expect(res.reply).toContain('Utsav Venues');
       expect(res.suggestions.length).toBeGreaterThanOrEqual(3);
     });
+
+    it('generates dynamic grounded response from Google Gemini using GEMINI_API_KEY', async () => {
+      const res = await processChatQuery('Which banquet halls in Bangalore are suitable for a grand wedding with 500 guests?');
+
+      expect(res.reply).toBeDefined();
+      expect(res.reply.length).toBeGreaterThan(30);
+      expect(res.source).toBe('google-gemini');
+      expect(res.suggestions.length).toBeGreaterThanOrEqual(1);
+    }, 15000);
   });
 });
