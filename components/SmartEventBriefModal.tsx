@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   X,
@@ -60,6 +61,7 @@ export default function SmartEventBriefModal({
 }: SmartEventBriefModalProps) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   const [brief, setBrief] = useState<Partial<EventBrief>>({
@@ -82,6 +84,10 @@ export default function SmartEventBriefModal({
     (initialValues?.guestCount || 200).toString()
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync initialValues
   useEffect(() => {
@@ -125,10 +131,15 @@ export default function SmartEventBriefModal({
   useEffect(() => {
     if (isOpen && contentRef.current) {
       contentRef.current.scrollTop = 0;
+      requestAnimationFrame(() => {
+        if (contentRef.current) {
+          contentRef.current.scrollTop = 0;
+        }
+      });
     }
   }, [isOpen, step]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   // Guest count input handler with strict validation
   const handleGuestInputChange = (val: string) => {
@@ -212,7 +223,7 @@ export default function SmartEventBriefModal({
   const currentSeatingStyle = SEATING_STYLES.find((s) => s.id === brief.seatingStyle) || SEATING_STYLES[0];
   const calculatedRecommendedCapacity = Math.round((brief.guestCount || 200) / currentSeatingStyle.ratio);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-stone-900/75 backdrop-blur-sm animate-fadeIn"
       role="dialog"
@@ -315,7 +326,7 @@ export default function SmartEventBriefModal({
         {/* SCROLLABLE CONTENT BODY (With ref to enforce scrollTop = 0) */}
         <div
           ref={contentRef}
-          className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5 overscroll-contain"
+          className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5 overscroll-contain scroll-smooth"
         >
           
           {/* Validation Notice Alert */}
@@ -861,6 +872,7 @@ export default function SmartEventBriefModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

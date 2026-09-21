@@ -2,10 +2,8 @@ import prisma from '@/lib/prisma';
 
 // Models to try in order of preference
 const GEMINI_MODELS = [
-  'gemini-3.6-flash',
   'gemini-flash-latest',
-  'gemini-3.5-flash-lite',
-  'gemini-3.8-flash',
+  'gemini-3.6-flash',
 ];
 
 interface ChatResponse {

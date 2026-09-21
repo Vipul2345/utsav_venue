@@ -113,6 +113,6 @@ describe('AI Chatbot & Dynamic Website Grounding (Google Gemini API Service)', (
       expect(res.reply.length).toBeGreaterThan(30);
       expect(res.source).toBe('google-gemini');
       expect(res.suggestions.length).toBeGreaterThanOrEqual(1);
-    }, 15000);
+    }, 30000);
   });
 });

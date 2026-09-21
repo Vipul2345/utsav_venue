@@ -83,7 +83,8 @@ export default function Navbar() {
   const isAdmin = user && user.role === 'ADMIN';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-amber-100 shadow-sm">
+    <>
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-amber-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
@@ -929,11 +930,14 @@ export default function Navbar() {
         </>
       )}
 
-      {/* Global Smart Event Brief Assistant Modal */}
-      <SmartEventBriefModal
-        isOpen={smartBriefOpen}
-        onClose={() => setSmartBriefOpen(false)}
-      />
+      {/* Mobile Drawer */}
     </header>
-  );
+
+    {/* Global Smart Event Brief Assistant Modal */}
+    <SmartEventBriefModal
+      isOpen={smartBriefOpen}
+      onClose={() => setSmartBriefOpen(false)}
+    />
+  </>
+);
 }
