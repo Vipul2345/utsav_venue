@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 const resendApiKey = process.env.RESEND_API_KEY;
 export const defaultResend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -20,10 +21,39 @@ export function resetResendClient() {
 
 export const resend = defaultResend;
 
+/**
+ * Creates or retrieves a nodemailer transporter for SMTP (e.g. Gmail)
+ */
+export function getSmtpTransporter() {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+
+  if (!user || !pass) return null;
+
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT || '465', 10);
+  const secure = process.env.SMTP_SECURE !== 'false' && port === 465;
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: {
+      user: user.trim(),
+      pass: pass.replace(/\s+/g, ''), // clean any spaces from Google 16-char code
+    },
+  });
+}
+
+export function isSmtpConfigured(): boolean {
+  return Boolean(process.env.SMTP_USER && (process.env.SMTP_PASS || process.env.SMTP_PASSWORD));
+}
+
 export interface EmailDeliveryResult {
   success: boolean;
   messageId?: string;
   simulated?: boolean;
+  provider?: 'smtp' | 'resend' | 'simulated';
   error?: {
     statusCode?: number;
     name?: string;
@@ -42,9 +72,19 @@ export interface BookingConfirmationEmailParams {
   totalAmount: number;
 }
 
-export const DEFAULT_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Utsav Venues <onboarding@resend.dev>';
-export const DEFAULT_SUPPORT_EMAIL = process.env.RESEND_SUPPORT_EMAIL || process.env.RESEND_FROM_EMAIL || 'Utsav Venues Support <onboarding@resend.dev>';
-export const DEFAULT_EVENTS_EMAIL = process.env.RESEND_EVENTS_EMAIL || process.env.RESEND_FROM_EMAIL || 'Utsav Venues Events <onboarding@resend.dev>';
+export const DEFAULT_FROM_EMAIL =
+  process.env.SMTP_FROM ||
+  (process.env.SMTP_USER ? `Utsav Venues <${process.env.SMTP_USER.trim()}>` : null) ||
+  process.env.RESEND_FROM_EMAIL ||
+  'Utsav Venues <onboarding@resend.dev>';
+
+export const DEFAULT_SUPPORT_EMAIL =
+  process.env.SMTP_SUPPORT_FROM ||
+  DEFAULT_FROM_EMAIL;
+
+export const DEFAULT_EVENTS_EMAIL =
+  process.env.SMTP_EVENTS_FROM ||
+  DEFAULT_FROM_EMAIL;
 
 export function buildOtpEmailPayload(to: string, otpCode: string) {
   return {
@@ -113,22 +153,65 @@ export function buildBookingConfirmationPayload(params: BookingConfirmationEmail
   };
 }
 
-export async function sendOtpEmail(to: string, otpCode: string): Promise<EmailDeliveryResult> {
-  const client = activeResend;
-  if (!client) {
-    console.log(`[Email] Resend not configured. Simulated OTP for ${to}: ${otpCode}`);
-    return { success: true, simulated: true };
+/**
+ * Unified email dispatcher supporting both Gmail SMTP (Nodemailer) and Resend API
+ */
+export async function dispatchEmail(payload: {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<EmailDeliveryResult> {
+  // 1. Priority 1: If SMTP is configured (Gmail App Password or Custom SMTP)
+  if (isSmtpConfigured()) {
+    try {
+      const transporter = getSmtpTransporter();
+      if (!transporter) {
+        throw new Error('Failed to initialize SMTP transporter');
+      }
+
+      const sender = process.env.SMTP_USER
+        ? `Utsav Venues <${process.env.SMTP_USER.trim()}>`
+        : payload.from;
+
+      const info = await transporter.sendMail({
+        from: sender,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+      });
+
+      console.log(`[EMAIL-SUCCESS-SMTP] Delivered email to ${payload.to} via Gmail SMTP (MessageID: ${info.messageId})`);
+      return { success: true, messageId: info.messageId, provider: 'smtp' };
+    } catch (err: any) {
+      console.error(`[EMAIL-FAILURE-SMTP] SMTP Error delivering to ${payload.to}:`, err.message);
+      return {
+        success: false,
+        provider: 'smtp',
+        error: {
+          statusCode: 500,
+          name: 'SMTPError',
+          message: `Gmail SMTP Error: ${err.message}`,
+        },
+      };
+    }
   }
 
-  const payload = buildOtpEmailPayload(to, otpCode);
+  // 2. Priority 2: Resend API
+  const client = activeResend;
+  if (!client) {
+    console.log(`[Email] Neither SMTP nor Resend configured. Simulated email for ${payload.to}: ${payload.subject}`);
+    return { success: true, simulated: true, provider: 'simulated' };
+  }
 
   try {
     const { data, error } = await client.emails.send(payload);
 
     if (error) {
-      console.error(`[EMAIL-FAILURE] Resend OTP error delivering to ${to}:`, error);
+      console.error(`[EMAIL-FAILURE] Resend error delivering to ${payload.to}:`, error);
       return {
         success: false,
+        provider: 'resend',
         error: {
           statusCode: (error as any).statusCode || 422,
           name: error.name || 'validation_error',
@@ -137,12 +220,13 @@ export async function sendOtpEmail(to: string, otpCode: string): Promise<EmailDe
       };
     }
 
-    return { success: true, messageId: data?.id };
+    return { success: true, messageId: data?.id, provider: 'resend' };
   } catch (err: any) {
-    console.error(`[EMAIL-FAILURE] Failed to send OTP email to ${to}:`, err.message);
+    console.error(`[EMAIL-FAILURE] Failed to send email via Resend to ${payload.to}:`, err.message);
     const errName = err.name && err.name !== 'Error' ? err.name : 'NetworkError';
     return {
       success: false,
+      provider: 'resend',
       error: {
         statusCode: err.statusCode || 500,
         name: errName,
@@ -152,45 +236,16 @@ export async function sendOtpEmail(to: string, otpCode: string): Promise<EmailDe
   }
 }
 
+export async function sendOtpEmail(to: string, otpCode: string): Promise<EmailDeliveryResult> {
+  const payload = buildOtpEmailPayload(to, otpCode);
+  return dispatchEmail(payload);
+}
+
 export async function sendBookingConfirmationEmail(
   params: BookingConfirmationEmailParams
 ): Promise<EmailDeliveryResult> {
-  const client = activeResend;
-  if (!client) {
-    console.log(`[Email] Resend not configured. Simulated booking receipt for ${params.to}`);
-    return { success: true, simulated: true };
-  }
-
   const payload = buildBookingConfirmationPayload(params);
-
-  try {
-    const { data, error } = await client.emails.send(payload);
-
-    if (error) {
-      console.error(`[EMAIL-FAILURE] Resend booking confirmation error for [${params.bookingNumber}] to ${params.to}:`, error);
-      return {
-        success: false,
-        error: {
-          statusCode: (error as any).statusCode || 422,
-          name: error.name || 'validation_error',
-          message: error.message,
-        },
-      };
-    }
-
-    return { success: true, messageId: data?.id };
-  } catch (err: any) {
-    console.error(`[EMAIL-FAILURE] Failed to send booking confirmation to ${params.to}:`, err.message);
-    const errName = err.name && err.name !== 'Error' ? err.name : 'NetworkError';
-    return {
-      success: false,
-      error: {
-        statusCode: err.statusCode || 500,
-        name: errName,
-        message: err.message,
-      },
-    };
-  }
+  return dispatchEmail(payload);
 }
 
 export interface ContactAcknowledgementEmailParams {
@@ -238,42 +293,8 @@ export function buildContactAcknowledgementPayload(params: ContactAcknowledgemen
 export async function sendContactAcknowledgementEmail(
   params: ContactAcknowledgementEmailParams
 ): Promise<EmailDeliveryResult> {
-  const client = activeResend;
-  if (!client) {
-    console.log(`[Email] Resend not configured. Simulated acknowledgement for [${params.ticketNumber}] to ${params.to}`);
-    return { success: true, simulated: true };
-  }
-
   const payload = buildContactAcknowledgementPayload(params);
-
-  try {
-    const { data, error } = await client.emails.send(payload);
-
-    if (error) {
-      console.error(`[EMAIL-FAILURE] Resend acknowledgement error for [${params.ticketNumber}] to ${params.to}:`, error);
-      return {
-        success: false,
-        error: {
-          statusCode: (error as any).statusCode || 422,
-          name: error.name || 'validation_error',
-          message: error.message,
-        },
-      };
-    }
-
-    return { success: true, messageId: data?.id };
-  } catch (err: any) {
-    console.error(`[EMAIL-FAILURE] Failed to send contact acknowledgement to ${params.to}:`, err.message);
-    const errName = err.name && err.name !== 'Error' ? err.name : 'NetworkError';
-    return {
-      success: false,
-      error: {
-        statusCode: err.statusCode || 500,
-        name: errName,
-        message: err.message,
-      },
-    };
-  }
+  return dispatchEmail(payload);
 }
 
 export interface GuestInvitationEmailParams {
@@ -338,40 +359,6 @@ export function buildGuestInvitationPayload(params: GuestInvitationEmailParams) 
 export async function sendGuestInvitationEmail(
   params: GuestInvitationEmailParams
 ): Promise<EmailDeliveryResult> {
-  const client = activeResend;
-  if (!client) {
-    console.log(`[Email] Resend not configured. Simulated guest invitation to ${params.to} for ${params.eventName}`);
-    return { success: true, simulated: true };
-  }
-
   const payload = buildGuestInvitationPayload(params);
-
-  try {
-    const { data, error } = await client.emails.send(payload);
-
-    if (error) {
-      console.error(`[EMAIL-FAILURE] Resend guest invitation error to ${params.to}:`, error);
-      return {
-        success: false,
-        error: {
-          statusCode: (error as any).statusCode || 422,
-          name: error.name || 'validation_error',
-          message: error.message,
-        },
-      };
-    }
-
-    return { success: true, messageId: data?.id };
-  } catch (err: any) {
-    console.error(`[EMAIL-FAILURE] Failed to send guest invitation to ${params.to}:`, err.message);
-    const errName = err.name && err.name !== 'Error' ? err.name : 'NetworkError';
-    return {
-      success: false,
-      error: {
-        statusCode: err.statusCode || 500,
-        name: errName,
-        message: err.message,
-      },
-    };
-  }
+  return dispatchEmail(payload);
 }
