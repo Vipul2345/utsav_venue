@@ -88,29 +88,46 @@ export async function generateAndSendOtp(
     },
   });
 
-  // 5. In production/configured environment, send real email via Resend (non-blocking)
-  const emailDeliveryPromise = sendOtpEmail(normalizedEmail, otpCode);
-  emailDeliveryPromise
-    .then((res) => {
-      if (!res.success) {
-        console.error(`[AUTH-OTP-EMAIL-FAILURE] Failed to deliver OTP to ${normalizedEmail}:`, res.error);
-      } else {
-        console.log(`[AUTH-OTP-EMAIL-SUCCESS] OTP delivered to ${normalizedEmail} (ID: ${res.messageId || 'simulated'})`);
-      }
-    })
-    .catch((err) => {
-      console.error('[AUTH-OTP-EMAIL-ERROR] Unexpected error sending OTP via Resend:', err);
+  // 5. Send real email via Resend and await confirmation
+  const emailDeliveryResult = await sendOtpEmail(normalizedEmail, otpCode);
+
+  if (!emailDeliveryResult.success) {
+    console.error(`[AUTH-OTP-EMAIL-FAILURE] Failed to deliver OTP to ${normalizedEmail}:`, emailDeliveryResult.error);
+
+    // Check if error is due to Resend sandbox restriction (HTTP 403 or unverified domain)
+    const errMsg = emailDeliveryResult.error?.message || '';
+    const isSandboxRestriction =
+      errMsg.includes('verify a domain') ||
+      errMsg.includes('testing emails') ||
+      emailDeliveryResult.error?.statusCode === 403;
+
+    // Clean up OTP record so user is not locked or stuck
+    await prisma.emailOtp.deleteMany({
+      where: {
+        email: normalizedEmail,
+        purpose,
+      },
     });
 
-  console.log(`[AUTH-OTP] OTP for ${normalizedEmail} (${purpose}): [${otpCode}] (Expires in ${OTP_EXPIRY_MINUTES}m)`);
+    const userFriendlyError = isSandboxRestriction
+      ? 'Resend Email Sandbox Mode: Emails can currently only be dispatched to the registered owner (vipulanandd@gmail.com). To enable sending to all email addresses, please verify a custom domain in your Resend Dashboard (resend.com/domains).'
+      : `Failed to deliver verification email: ${errMsg || 'Please check your email address and try again.'}`;
+
+    return {
+      success: false,
+      error: userFriendlyError,
+    };
+  }
+
+  console.log(`[AUTH-OTP-EMAIL-SUCCESS] OTP delivered to ${normalizedEmail} (Expires in ${OTP_EXPIRY_MINUTES}m)`);
 
   return {
     success: true,
     message: `Verification OTP sent to ${normalizedEmail}`,
     expiresAt,
     cooldownSeconds: RESEND_COOLDOWN_SECONDS,
-    devOtpCode: process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEV_OTP === 'true' ? otpCode : otpCode, // Always provide in demo for seamless reviewer testing
-    emailDeliveryPromise,
+    devOtpCode: process.env.NODE_ENV === 'test' ? otpCode : undefined,
+    emailDeliveryPromise: Promise.resolve(emailDeliveryResult),
   };
 }
 

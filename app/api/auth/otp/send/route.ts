@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.error, cooldownSeconds: result.cooldownSeconds },
-        { status: 429 }
+        { status: result.cooldownSeconds ? 429 : 400 }
       );
     }
 
@@ -28,7 +28,6 @@ export async function POST(request: Request) {
       message: result.message,
       expiresAt: result.expiresAt,
       cooldownSeconds: result.cooldownSeconds,
-      devOtpCode: result.devOtpCode, // For reviewer & demo testing visibility
     });
   } catch (error: any) {
     console.error('Send OTP Error:', error);

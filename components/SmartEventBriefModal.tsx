@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   X,
@@ -59,6 +59,7 @@ export default function SmartEventBriefModal({
   initialValues,
 }: SmartEventBriefModalProps) {
   const router = useRouter();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   const [brief, setBrief] = useState<Partial<EventBrief>>({
@@ -119,6 +120,13 @@ export default function SmartEventBriefModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Ensure scrollable content is always at top when modal opens or step changes
+  useEffect(() => {
+    if (isOpen && contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [isOpen, step]);
 
   if (!isOpen) return null;
 
@@ -221,30 +229,27 @@ export default function SmartEventBriefModal({
       {/* Main Dialog Container */}
       <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl lg:max-w-3xl bg-white sm:rounded-2xl shadow-2xl border-0 sm:border border-stone-200 flex flex-col overflow-hidden z-10">
         
-        {/* FIXED HEADER (Never scrolls away) */}
-        <div className="shrink-0 p-4 sm:p-6 bg-gradient-to-r from-amber-700 via-brand-600 to-amber-800 text-white relative shadow-sm">
+        {/* FIXED HEADER (Compact & clean, never scrolls away) */}
+        <div className="shrink-0 px-4 py-3 sm:px-6 sm:py-3.5 bg-gradient-to-r from-amber-700 via-brand-600 to-amber-800 text-white relative shadow-sm">
           <button
             onClick={onClose}
-            className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 text-white/80 hover:text-white p-2 rounded-full hover:bg-white/10 transition cursor-pointer"
+            className="absolute top-2.5 right-2.5 sm:top-3 sm:right-4 text-white/80 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition cursor-pointer"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+            <X className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2 text-amber-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider mb-1">
-            <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+          <div className="flex items-center gap-1.5 text-amber-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-0.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
             <span>Smart Event Brief Assistant</span>
           </div>
 
-          <h2 id="smart-brief-title" className="text-lg sm:text-2xl font-black tracking-tight text-white">
+          <h2 id="smart-brief-title" className="text-base sm:text-xl font-black tracking-tight text-white">
             Plan Your Celebration
           </h2>
-          <p className="text-amber-100/85 text-xs sm:text-sm mt-0.5 max-w-lg hidden sm:block">
-            Fill in your celebration specs for instant matched venues, capacity density & budget estimates.
-          </p>
 
-          {/* Desktop Stepper Indicator */}
-          <div className="hidden sm:grid grid-cols-4 gap-2 mt-4 pt-2 border-t border-white/15">
+          {/* Desktop Stepper Indicator (Compact) */}
+          <div className="hidden sm:grid grid-cols-4 gap-2 mt-2 pt-2 border-t border-white/15">
             {stepTitles.map((st) => {
               const isActive = step === st.num;
               const isPast = step > st.num;
@@ -264,9 +269,9 @@ export default function SmartEventBriefModal({
                       : 'text-white/40 cursor-not-allowed'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 text-xs font-bold mb-1">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold mb-1">
                     <span
-                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
                         isActive
                           ? 'bg-amber-300 text-amber-950 shadow-sm'
                           : isPast
@@ -274,12 +279,12 @@ export default function SmartEventBriefModal({
                           : 'bg-white/10 text-white/50'
                       }`}
                     >
-                      {isPast ? <Check className="w-3 h-3" /> : st.num}
+                      {isPast ? <Check className="w-2.5 h-2.5" /> : st.num}
                     </span>
                     <span className="truncate">{st.title}</span>
                   </div>
                   <div
-                    className={`h-1 rounded-full transition-all ${
+                    className={`h-0.5 rounded-full transition-all ${
                       isActive ? 'bg-amber-300' : isPast ? 'bg-amber-400/60' : 'bg-white/15'
                     }`}
                   />
@@ -289,8 +294,8 @@ export default function SmartEventBriefModal({
           </div>
 
           {/* Mobile Stepper: Compact & Clean */}
-          <div className="sm:hidden mt-3 pt-2 border-t border-white/15">
-            <div className="flex items-center justify-between text-xs font-bold text-amber-100 mb-1.5">
+          <div className="sm:hidden mt-2 pt-1.5 border-t border-white/15">
+            <div className="flex items-center justify-between text-[11px] font-bold text-amber-100 mb-1">
               <span>
                 Step {step} of 4: {stepTitles[step - 1].title}
               </span>
@@ -298,7 +303,7 @@ export default function SmartEventBriefModal({
                 {Math.round((step / 4) * 100)}% Complete
               </span>
             </div>
-            <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full bg-white/20 h-1 rounded-full overflow-hidden">
               <div
                 className="bg-amber-300 h-full transition-all duration-300 rounded-full"
                 style={{ width: `${(step / 4) * 100}%` }}
@@ -307,8 +312,11 @@ export default function SmartEventBriefModal({
           </div>
         </div>
 
-        {/* SCROLLABLE CONTENT BODY (Only this container scrolls) */}
-        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6 overscroll-contain">
+        {/* SCROLLABLE CONTENT BODY (With ref to enforce scrollTop = 0) */}
+        <div
+          ref={contentRef}
+          className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5 overscroll-contain"
+        >
           
           {/* Validation Notice Alert */}
           {validationError && (
@@ -320,13 +328,14 @@ export default function SmartEventBriefModal({
 
           {/* STEP 1: Occasion, Guests & City */}
           {step === 1 && (
-            <div className="space-y-6 animate-fadeIn">
+            <div className="space-y-5 animate-fadeIn">
               {/* Event Type / Occasion */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-2">
-                  1. What kind of event are you hosting?
+                <label className="block text-xs font-bold uppercase tracking-wider text-amber-950 bg-amber-50 border border-amber-200/90 px-3 py-1 rounded-lg mb-2.5 inline-flex items-center gap-1.5 shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                  <span>1. What kind of event are you hosting?</span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {EVENT_TYPES.map((type) => {
                     const isSelected = brief.eventType === type;
                     return (
@@ -337,7 +346,7 @@ export default function SmartEventBriefModal({
                           setBrief({ ...brief, eventType: type });
                           setValidationError(null);
                         }}
-                        className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold transition-all flex items-center justify-between text-left cursor-pointer min-h-[44px] ${
+                        className={`p-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all flex items-center justify-between text-left cursor-pointer min-h-[40px] ${
                           isSelected
                             ? 'border-amber-600 bg-amber-50/90 text-amber-950 ring-2 ring-amber-500/20 shadow-sm'
                             : 'border-stone-200 hover:border-amber-300 text-stone-700 bg-white hover:bg-stone-50'

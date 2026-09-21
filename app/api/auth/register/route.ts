@@ -76,12 +76,17 @@ export async function POST(request: Request) {
       } else {
         // If unverified customer registered earlier, re-send OTP
         const otpResult = await generateAndSendOtp(normalizedEmail, 'REGISTRATION');
+        if (!otpResult.success) {
+          return NextResponse.json(
+            { error: otpResult.error || 'Failed to dispatch verification email.' },
+            { status: 400 }
+          );
+        }
         return NextResponse.json({
           success: true,
           requireOtp: true,
           email: normalizedEmail,
           message: 'Account exists but is unverified. A new verification OTP has been sent.',
-          devOtpCode: otpResult.devOtpCode,
         });
       }
     }
@@ -131,12 +136,21 @@ export async function POST(request: Request) {
     // CUSTOMER FLOW: Generate OTP & do not issue session cookie until verified
     if (isCustomer) {
       const otpResult = await generateAndSendOtp(user.email, 'REGISTRATION');
+      if (!otpResult.success) {
+        return NextResponse.json(
+          {
+            error: otpResult.error || 'Account created, but failed to send verification email. Please check your email or try requesting OTP again.',
+            requireOtp: true,
+            email: user.email,
+          },
+          { status: 400 }
+        );
+      }
       return NextResponse.json({
         success: true,
         requireOtp: true,
         email: user.email,
         message: 'Account created! Please verify your email with the 6-digit OTP code.',
-        devOtpCode: otpResult.devOtpCode,
       });
     }
 

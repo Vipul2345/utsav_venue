@@ -24,6 +24,8 @@ import {
   Lock,
   RefreshCw,
   ExternalLink,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { useModalDismiss } from '@/lib/hooks/useModalDismiss';
 
@@ -53,10 +55,13 @@ export default function BookingDetailsPage() {
   // Digital Invitations State
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loadingInvitations, setLoadingInvitations] = useState(false);
-  const [recipientEmails, setRecipientEmails] = useState('');
+  const [guestEmailFields, setGuestEmailFields] = useState<string[]>(['']);
   const [invitationMessage, setInvitationMessage] = useState('');
   const [sendingInvitations, setSendingInvitations] = useState(false);
-  const [invitationStatus, setInvitationStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [invitationStatus, setInvitationStatus] = useState<{
+    type: 'success' | 'warning' | 'error';
+    message: string;
+  } | null>(null);
 
   // Identity Documents (KYC) State
   const [documents, setDocuments] = useState<any[]>([]);
@@ -123,9 +128,38 @@ export default function BookingDetailsPage() {
     }
   }, [booking?.status, bookingId]);
 
+  const handleAddEmailField = () => {
+    if (guestEmailFields.length >= 25) return;
+    setGuestEmailFields((prev) => [...prev, '']);
+  };
+
+  const handleRemoveEmailField = (index: number) => {
+    if (guestEmailFields.length <= 1) {
+      setGuestEmailFields(['']);
+      return;
+    }
+    setGuestEmailFields((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEmailFieldChange = (index: number, val: string) => {
+    setGuestEmailFields((prev) => {
+      const updated = [...prev];
+      updated[index] = val;
+      return updated;
+    });
+  };
+
   const handleSendInvitations = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipientEmails.trim()) return;
+    const validRecipients = guestEmailFields
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0);
+
+    if (validRecipients.length === 0) {
+      setInvitationStatus({ type: 'error', message: 'Please enter at least one guest email address.' });
+      return;
+    }
+
     setSendingInvitations(true);
     setInvitationStatus(null);
     try {
@@ -133,15 +167,20 @@ export default function BookingDetailsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipients: recipientEmails,
+          recipients: validRecipients.join(', '),
           customMessage: invitationMessage,
           eventTitle: `${booking.occasion?.name || 'Event Celebration'} at ${booking.hall.name}`,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to dispatch invitations');
-      setInvitationStatus({ type: 'success', message: `Dispatched ${data.count} digital invitation(s) successfully.` });
-      setRecipientEmails('');
+
+      const isWarning = data.hasSandboxRestriction;
+      setInvitationStatus({
+        type: isWarning ? 'warning' : 'success',
+        message: data.message || `Dispatched ${data.count || 0} digital invitation(s) successfully.`,
+      });
+      setGuestEmailFields(['']);
       setInvitationMessage('');
       await fetchInvitations();
     } catch (err: any) {
@@ -591,35 +630,78 @@ export default function BookingDetailsPage() {
 
           {invitationStatus && (
             <div
-              className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+              className={`p-3.5 rounded-xl text-xs font-semibold flex items-start gap-2.5 ${
                 invitationStatus.type === 'success'
                   ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : invitationStatus.type === 'warning'
+                  ? 'bg-amber-50 text-amber-900 border border-amber-200'
                   : 'bg-rose-50 text-rose-800 border border-rose-200'
               }`}
             >
               {invitationStatus.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+              ) : invitationStatus.type === 'warning' ? (
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
               ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
               )}
-              <span>{invitationStatus.message}</span>
+              <span className="leading-relaxed">{invitationStatus.message}</span>
             </div>
           )}
 
-          {/* Invitation Dispatch Form */}
+          {/* Dynamic Multi-Field Invitation Dispatch Form */}
           <form onSubmit={handleSendInvitations} className="space-y-4 text-xs">
             <div>
-              <label className="block font-semibold text-stone-700 mb-1">
-                Guest Email Addresses * (Comma or newline separated, up to 25 per batch)
-              </label>
-              <textarea
-                required
-                rows={3}
-                value={recipientEmails}
-                onChange={(e) => setRecipientEmails(e.target.value)}
-                placeholder="e.g. friend1@gmail.com, family.member@outlook.com"
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 font-mono"
-              />
+              <div className="flex items-center justify-between mb-2">
+                <label className="block font-semibold text-stone-700">
+                  Guest Email Addresses * (Add guests individually)
+                </label>
+                <span className="text-[11px] text-stone-400 font-medium">
+                  {guestEmailFields.filter((e) => e.trim().length > 0).length} of {guestEmailFields.length} entered (max 25)
+                </span>
+              </div>
+
+              {/* Dynamic Input Fields List */}
+              <div className="space-y-2.5">
+                {guestEmailFields.map((fieldVal, idx) => (
+                  <div key={idx} className="flex items-center gap-2 animate-fadeIn">
+                    <div className="relative flex-1">
+                      <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="email"
+                        required={idx === 0}
+                        value={fieldVal}
+                        onChange={(e) => handleEmailFieldChange(idx, e.target.value)}
+                        placeholder={`guest${idx + 1}@example.com`}
+                        className="w-full pl-10 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition font-medium text-stone-800"
+                      />
+                    </div>
+                    {guestEmailFields.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEmailField(idx)}
+                        className="p-2.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 border border-stone-200 hover:border-rose-200 rounded-xl transition cursor-pointer"
+                        title="Remove guest email"
+                        aria-label={`Remove guest email ${idx + 1}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Another Field Button */}
+              {guestEmailFields.length < 25 && (
+                <button
+                  type="button"
+                  onClick={handleAddEmailField}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100/80 border border-amber-200/80 px-3.5 py-2 rounded-xl transition cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Another Guest Email</span>
+                </button>
+              )}
             </div>
 
             <div>
@@ -631,17 +713,23 @@ export default function BookingDetailsPage() {
                 value={invitationMessage}
                 onChange={(e) => setInvitationMessage(e.target.value)}
                 placeholder="e.g. We would be delighted to have you celebrate this special day with us!"
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
               />
             </div>
 
             <button
               type="submit"
-              disabled={sendingInvitations || !recipientEmails.trim()}
+              disabled={sendingInvitations || guestEmailFields.every((e) => !e.trim())}
               className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[42px]"
             >
               <Send className="w-4 h-4" />
-              <span>{sendingInvitations ? 'Dispatching Invitations...' : 'Send Branded Email Invitations'}</span>
+              <span>
+                {sendingInvitations
+                  ? 'Dispatching Invitations...'
+                  : `Send Branded Email Invitations (${
+                      guestEmailFields.filter((e) => e.trim().length > 0).length || 1
+                    })`}
+              </span>
             </button>
           </form>
 

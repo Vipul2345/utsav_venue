@@ -71,7 +71,6 @@ function RegisterContent() {
   // OTP Verification state
   const [step, setStep] = useState<'REGISTER' | 'OTP'>('REGISTER');
   const [otpCode, setOtpCode] = useState('');
-  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
 
@@ -144,7 +143,6 @@ function RegisterContent() {
 
       if (data.requireOtp) {
         setStep('OTP');
-        setDevOtp(data.devOtpCode || null);
         setResendCooldown(60);
         setSuccessMsg(data.message || 'Verification code sent to your email.');
       } else {
@@ -225,7 +223,6 @@ function RegisterContent() {
         throw new Error(data.error || 'Failed to resend code');
       }
 
-      setDevOtp(data.devOtpCode || null);
       setResendCooldown(60);
       setSuccessMsg('A fresh verification code has been sent to your email.');
     } catch (err: any) {
@@ -572,19 +569,6 @@ function RegisterContent() {
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-700 text-xs">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
                 <span>{error}</span>
-              </div>
-            )}
-
-            {devOtp && (
-              <div className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center justify-between">
-                <span className="font-medium text-[11px]">Demo OTP: <strong className="font-mono text-xs">{devOtp}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => setOtpCode(devOtp)}
-                  className="text-[10px] font-bold uppercase text-brand-700 hover:underline"
-                >
-                  Auto-Fill
-                </button>
               </div>
             )}
 

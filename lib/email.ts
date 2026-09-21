@@ -42,9 +42,13 @@ export interface BookingConfirmationEmailParams {
   totalAmount: number;
 }
 
+export const DEFAULT_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Utsav Venues <onboarding@resend.dev>';
+export const DEFAULT_SUPPORT_EMAIL = process.env.RESEND_SUPPORT_EMAIL || process.env.RESEND_FROM_EMAIL || 'Utsav Venues Support <onboarding@resend.dev>';
+export const DEFAULT_EVENTS_EMAIL = process.env.RESEND_EVENTS_EMAIL || process.env.RESEND_FROM_EMAIL || 'Utsav Venues Events <onboarding@resend.dev>';
+
 export function buildOtpEmailPayload(to: string, otpCode: string) {
   return {
-    from: 'Utsav Venues <onboarding@resend.dev>',
+    from: DEFAULT_FROM_EMAIL,
     to,
     subject: `Your Verification Code: ${otpCode} - Utsav Venues`,
     html: `
@@ -64,7 +68,7 @@ export function buildOtpEmailPayload(to: string, otpCode: string) {
 
 export function buildBookingConfirmationPayload(params: BookingConfirmationEmailParams) {
   return {
-    from: 'Utsav Venues <onboarding@resend.dev>',
+    from: DEFAULT_FROM_EMAIL,
     to: params.to,
     subject: `Booking Confirmed! [Ref: ${params.bookingNumber}] - ${params.hallName}`,
     html: `
@@ -199,7 +203,7 @@ export interface ContactAcknowledgementEmailParams {
 
 export function buildContactAcknowledgementPayload(params: ContactAcknowledgementEmailParams) {
   return {
-    from: 'Utsav Venues Support <onboarding@resend.dev>',
+    from: DEFAULT_SUPPORT_EMAIL,
     to: params.to,
     subject: `Enquiry Received [Ref: ${params.ticketNumber}] - Utsav Venues Support`,
     html: `
@@ -286,7 +290,7 @@ export interface GuestInvitationEmailParams {
 
 export function buildGuestInvitationPayload(params: GuestInvitationEmailParams) {
   return {
-    from: 'Utsav Venues Events <onboarding@resend.dev>',
+    from: DEFAULT_EVENTS_EMAIL,
     to: params.to,
     subject: `You are cordially invited! ${params.hostName} invites you to ${params.eventName}`,
     html: `

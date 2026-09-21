@@ -152,7 +152,7 @@ export async function POST(
       : booking.eventDate;
     const timeSlot = `${booking.startTime} - ${booking.endTime}`;
 
-    const results: Array<{ email: string; success: boolean }> = [];
+    const results: Array<{ email: string; success: boolean; error?: string }> = [];
 
     // Dispatch invitations
     for (const to of validEmails) {
@@ -176,8 +176,12 @@ export async function POST(
           },
         });
 
-        results.push({ email: to, success: sendResult.success });
-      } catch (err) {
+        results.push({
+          email: to,
+          success: sendResult.success,
+          error: !sendResult.success ? sendResult.error?.message : undefined,
+        });
+      } catch (err: any) {
         await prisma.eventInvitation.create({
           data: {
             bookingId: id,
@@ -185,16 +189,32 @@ export async function POST(
             status: 'FAILED',
           },
         });
-        results.push({ email: to, success: false });
+        results.push({ email: to, success: false, error: err.message });
       }
     }
 
     const sentCount = results.filter((r) => r.success).length;
+    const failedList = results.filter((r) => !r.success);
+    const hasSandboxRestriction = failedList.some(
+      (f) =>
+        f.error?.includes('verify a domain') ||
+        f.error?.includes('testing emails') ||
+        f.error?.includes('403')
+    );
+
+    let diagnosticMessage = `Successfully dispatched ${sentCount} of ${validEmails.length} invitation emails.`;
+    if (hasSandboxRestriction) {
+      diagnosticMessage += ` Note: Resend is currently in unverified sandbox mode, which only permits delivery to the registered account owner (vipulanandd@gmail.com). To deliver invitations to external guests, please verify your custom domain at resend.com/domains.`;
+    } else if (failedList.length > 0) {
+      diagnosticMessage += ` (${failedList.length} failed to send)`;
+    }
 
     return NextResponse.json({
-      success: true,
-      message: `Successfully dispatched ${sentCount} of ${validEmails.length} invitation emails.`,
-      sentCount,
+      success: sentCount > 0,
+      count: sentCount,
+      totalRequested: validEmails.length,
+      message: diagnosticMessage,
+      hasSandboxRestriction,
       results,
     });
   } catch (error: any) {
